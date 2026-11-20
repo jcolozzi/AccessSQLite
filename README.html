@@ -1,0 +1,1690 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>AccessSQLite — VBA Class Library &amp; ORM for Microsoft Access</title><style>/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+html, body {
+	font-family: var(--markdown-font-family, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", system-ui, "Ubuntu", "Droid Sans", sans-serif);
+	font-size: var(--markdown-font-size, 14px);
+	padding: 0 26px;
+	line-height: var(--markdown-line-height, 22px);
+	word-wrap: break-word;
+}
+
+body {
+	padding-top: 1em;
+}
+
+/* Reset margin top for elements */
+h1, h2, h3, h4, h5, h6,
+p, ol, ul, pre {
+	margin-top: 0;
+}
+
+h1, h2, h3, h4, h5, h6 {
+	font-weight: 600;
+	margin-top: 24px;
+	margin-bottom: 16px;
+	line-height: 1.25;
+}
+
+#code-csp-warning {
+	position: fixed;
+	top: 0;
+	right: 0;
+	color: white;
+	margin: 16px;
+	text-align: center;
+	font-size: 12px;
+	font-family: sans-serif;
+	background-color:#444444;
+	cursor: pointer;
+	padding: 6px;
+	box-shadow: 1px 1px 1px rgba(0,0,0,.25);
+}
+
+#code-csp-warning:hover {
+	text-decoration: none;
+	background-color:#007acc;
+	box-shadow: 2px 2px 2px rgba(0,0,0,.25);
+}
+
+body.scrollBeyondLastLine {
+	margin-bottom: calc(100vh - 22px);
+}
+
+body.showEditorSelection .code-line {
+	position: relative;
+}
+
+.code-line-diff {
+	border-radius: 2px;
+	box-shadow: -4px 0 0 transparent;
+}
+
+.code-line-diff-added {
+	background-color: var(--vscode-diffEditor-insertedTextBackground);
+	box-shadow: -4px 0 0 var(--vscode-diffEditorGutter-insertedLineBackground);
+}
+
+.code-line-diff-deleted {
+	background-color: var(--vscode-diffEditor-removedTextBackground);
+	box-shadow: -4px 0 0 var(--vscode-diffEditorGutter-removedLineBackground);
+}
+
+.vscode-high-contrast .code-line-diff-added {
+	outline: 1px solid var(--vscode-diffEditor-insertedTextBorder);
+}
+
+.vscode-high-contrast .code-line-diff-deleted {
+	outline: 1px solid var(--vscode-diffEditor-removedTextBorder);
+}
+
+::highlight(diff-inner-added) {
+	background-color: var(--vscode-diffEditor-insertedTextBackground);
+}
+
+::highlight(diff-inner-deleted) {
+	background-color: var(--vscode-diffEditor-removedTextBackground);
+}
+
+/* Hide the empty marker spans so they don't affect layout */
+[data-diff-start],
+[data-diff-end] {
+	display: contents;
+}
+
+/* Change indicator — shown where lines were deleted or modified */
+.diff-change-indicator {
+	position: relative;
+	height: 4px;
+	overflow: visible;
+	z-index: 1;
+}
+
+/* Single visual element for the entire arrow + bar shape (avoids transparent color overlap) */
+.diff-change-indicator::before {
+	content: "";
+	position: absolute;
+	top: -4px;
+	left: -12px;
+	right: 0;
+	height: 12px;
+	background-color: var(--vscode-diffEditorGutter-removedLineBackground, var(--vscode-diffEditor-removedTextBackground));
+	clip-path: polygon(
+		0px 0px,
+		4px 4px,
+		100% 4px,
+		100% 8px,
+		4px 8px,
+		0px 12px
+	);
+	pointer-events: none;
+}
+
+/* Transparent hover target over the gutter arrow area */
+.diff-change-indicator-arrow {
+	display: block;
+	position: absolute;
+	top: -4px;
+	left: -12px;
+	width: 12px;
+	height: 12px;
+	cursor: pointer;
+	z-index: 2;
+}
+
+.diff-change-indicator-arrow:hover > .diff-change-indicator-tooltip,
+.diff-change-indicator-arrow > .diff-change-indicator-tooltip:hover {
+	display: block;
+}
+
+.diff-change-indicator-arrow > .diff-change-indicator-tooltip {
+	left: 8px;
+	top: 100%;
+	right: auto;
+	width: max-content;
+	max-width: 80vw;
+}
+
+/* Modified lines override the left gutter bar color */
+.code-line-diff-modified.code-line-diff-added {
+	box-shadow: none;
+}
+
+/* Modification indicator uses a subtler style placed after the changed block */
+.diff-change-indicator-modification {
+	height: 2px;
+	background: repeating-linear-gradient(
+		90deg,
+		var(--vscode-diffEditorGutter-removedLineBackground, var(--vscode-diffEditor-removedTextBackground)) 0px,
+		var(--vscode-diffEditorGutter-removedLineBackground, var(--vscode-diffEditor-removedTextBackground)) 4px,
+		transparent 4px,
+		transparent 8px
+	);
+}
+
+.diff-change-indicator-modification .diff-change-indicator-arrow {
+	background: inherit;
+}
+
+/* Left gutter bar for modification blocks */
+.diff-modification-gutter {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: -12px;
+	width: 4px;
+	z-index: 5;
+	background-color: var(--vscode-editorGutter-modifiedBackground, #1b81a8);
+	cursor: pointer;
+}
+
+.diff-modification-gutter:hover > .diff-change-indicator-tooltip,
+.diff-modification-gutter > .diff-change-indicator-tooltip:hover {
+	display: block;
+}
+
+.diff-modification-gutter > .diff-change-indicator-tooltip {
+	left: 4px;
+	top: 0;
+	right: auto;
+	width: max-content;
+	max-width: 80vw;
+}
+
+.diff-change-indicator-tooltip {
+	display: none;
+	position: absolute;
+	top: 100%;
+	left: 0;
+	right: 0;
+	z-index: 10;
+	background-color: var(--vscode-editor-background);
+	border: 1px solid var(--vscode-editorWidget-border, var(--vscode-contrastBorder, rgba(127, 127, 127, 0.35)));
+	border-radius: 3px;
+	max-height: min(400px, 80vh);
+	overflow-y: auto;
+	overflow-x: hidden;
+	overscroll-behavior: contain;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.diff-change-indicator-tooltip pre {
+	margin: 0;
+	font-size: 0.9em;
+	background: transparent;
+	border: 0;
+	white-space: pre-wrap;
+	word-break: break-word;
+	color: var(--vscode-editor-foreground);
+}
+
+.diff-tooltip-deleted {
+	background-color: var(--vscode-diffEditor-removedTextBackground);
+	border-left: 4px solid var(--vscode-diffEditorGutter-removedLineBackground, var(--vscode-diffEditor-removedTextBackground));
+	padding: 2px 6px;
+}
+
+.diff-tooltip-added {
+	background-color: var(--vscode-diffEditor-insertedTextBackground);
+	border-left: 4px solid var(--vscode-diffEditorGutter-insertedLineBackground, var(--vscode-diffEditor-insertedTextBackground));
+	padding: 2px 6px;
+}
+
+.diff-tooltip-inner-deleted,
+.diff-tooltip-inner-added {
+	box-decoration-break: clone;
+}
+
+.diff-tooltip-inner-deleted {
+	background-color: var(--vscode-diffEditor-removedTextBackground);
+	text-decoration: line-through;
+	text-decoration-color: var(--vscode-editor-foreground);
+}
+
+.diff-tooltip-inner-added {
+	background-color: var(--vscode-diffEditor-insertedTextBackground);
+}
+
+body.showEditorSelection :not(tr,ul,ol).code-active-line:before,
+body.showEditorSelection :not(tr,ul,ol).code-line:hover:before {
+	content: "";
+	display: block;
+	position: absolute;
+	top: 0;
+	left: -12px;
+	height: 100%;
+}
+
+.vscode-high-contrast.showEditorSelection  :not(tr,ul,ol).code-line .code-line:hover:before {
+	border-left: none;
+}
+
+body.showEditorSelection li.code-active-line:before,
+body.showEditorSelection li.code-line:hover:before {
+	left: -30px;
+}
+
+.vscode-light.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.15);
+}
+
+.vscode-light.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.40);
+}
+
+.vscode-dark.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.4);
+}
+
+.vscode-dark.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.60);
+}
+
+.vscode-high-contrast.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 160, 0, 0.7);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 160, 0, 1);
+}
+
+/* Prevent `sub` and `sup` elements from affecting line height */
+sub,
+sup {
+	line-height: 0;
+}
+
+ul ul:first-child,
+ul ol:first-child,
+ol ul:first-child,
+ol ol:first-child {
+	margin-bottom: 0;
+}
+
+img, video {
+	max-width: 100%;
+	max-height: 100%;
+}
+
+a {
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+a:focus,
+input:focus,
+select:focus,
+textarea:focus {
+	outline: 1px solid -webkit-focus-ring-color;
+	outline-offset: -1px;
+}
+
+p {
+	margin-bottom: 16px;
+}
+
+li p {
+	margin-bottom: 0.7em;
+}
+
+ul,
+ol {
+	margin-bottom: 0.7em;
+}
+
+hr {
+	border: 0;
+	height: 1px;
+	border-bottom: 1px solid;
+}
+
+h1 {
+	font-size: 2em;
+	margin-top: 0;
+	padding-bottom: 0.3em;
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+}
+
+h2 {
+	font-size: 1.5em;
+	padding-bottom: 0.3em;
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+}
+
+h3 {
+	font-size: 1.25em;
+}
+
+h4 {
+	font-size: 1em;
+}
+
+h5 {
+	font-size: 0.875em;
+}
+
+h6 {
+	font-size: 0.85em;
+}
+
+table {
+	border-collapse: collapse;
+	margin-bottom: 0.7em;
+}
+
+th {
+	text-align: left;
+	border-bottom: 1px solid;
+}
+
+th,
+td {
+	padding: 5px 10px;
+}
+
+table > tbody > tr + tr > td {
+	border-top: 1px solid;
+}
+
+blockquote {
+	margin: 0;
+	padding: 0px 16px 0 10px;
+	border-left-width: 5px;
+	border-left-style: solid;
+	border-radius: 2px;
+}
+
+code {
+	font-family: var(--vscode-editor-font-family, "SF Mono", Monaco, Menlo, Consolas, "Ubuntu Mono", "Liberation Mono", "DejaVu Sans Mono", "Courier New", monospace);
+	font-size: 1em;
+	line-height: 1.357em;
+}
+
+body.wordWrap pre {
+	white-space: pre-wrap;
+}
+
+pre:not(.hljs),
+pre.hljs code > div {
+	padding: 16px;
+	border-radius: 3px;
+	overflow: auto;
+}
+
+pre code {
+	display: inline-block;
+	color: var(--vscode-editor-foreground);
+	tab-size: 4;
+	background: none;
+}
+
+/** Theming */
+
+pre {
+	position: relative;
+	background-color: var(--vscode-textCodeBlock-background);
+	border: 1px solid var(--vscode-widget-border);
+}
+
+/* Code block copy button */
+.code-block-copy-button {
+	position: absolute;
+	top: 8px;
+	right: 8px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	padding: 0;
+	border: 1px solid var(--vscode-widget-border, rgba(127, 127, 127, 0.35));
+	border-radius: 4px;
+	background-color: var(--vscode-textCodeBlock-background, var(--vscode-editor-background));
+	color: var(--vscode-editor-foreground);
+	cursor: pointer;
+	opacity: 0;
+	transition: opacity 0.15s ease;
+}
+
+pre:hover > .code-block-copy-button,
+.code-block-copy-button:focus {
+	opacity: 1;
+}
+
+.code-block-copy-button:hover {
+	background-color: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, 0.31));
+}
+
+.code-block-copy-button:active {
+	background-color: var(--vscode-toolbar-activeBackground, rgba(99, 102, 103, 0.31));
+}
+
+.code-block-copy-button.copied {
+	color: var(--vscode-testing-iconPassed, #73c991);
+	opacity: 1;
+}
+
+.vscode-high-contrast h1 {
+	border-color: rgb(0, 0, 0);
+}
+
+.vscode-light th {
+	border-color: rgba(0, 0, 0, 0.69);
+}
+
+.vscode-dark th {
+	border-color: rgba(255, 255, 255, 0.69);
+}
+
+.vscode-light h1,
+.vscode-light h2,
+.vscode-light hr,
+.vscode-light td {
+	border-color: rgba(0, 0, 0, 0.18);
+}
+
+.vscode-dark h1,
+.vscode-dark h2,
+.vscode-dark hr,
+.vscode-dark td {
+	border-color: rgba(255, 255, 255, 0.18);
+}
+
+/* Frontmatter rendering */
+table.frontmatter {
+	margin-bottom: 16px;
+	border-collapse: collapse;
+}
+
+table.frontmatter th,
+table.frontmatter td {
+	padding: 6px 13px;
+	border: 1px solid var(--vscode-widget-border, rgba(127, 127, 127, 0.35));
+	text-align: left;
+	vertical-align: top;
+}
+
+table.frontmatter th {
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+table.frontmatter td > ul {
+	margin: 0;
+	padding-left: 1.2em;
+}
+
+pre.frontmatter {
+	margin-bottom: 16px;
+}
+
+.frontmatter-error {
+	margin-bottom: 16px;
+	padding: 8px 13px;
+	border-left: 4px solid var(--vscode-editorError-foreground, #f48771);
+	background: var(--vscode-inputValidation-errorBackground, rgba(244, 135, 113, 0.1));
+	color: var(--vscode-editorError-foreground, #f48771);
+}
+
+.frontmatter-error pre {
+	margin: 6px 0 0;
+	white-space: pre-wrap;
+	color: inherit;
+	background: transparent;
+	padding: 0;
+}
+</style><style>/*
+https://raw.githubusercontent.com/isagalaev/highlight.js/master/src/styles/vs2015.css
+*/
+/*
+ * Visual Studio 2015 dark style
+ * Author: Nicolas LLOBERA <nllobera@gmail.com>
+ */
+
+
+.hljs-keyword,
+.hljs-literal,
+.hljs-symbol,
+.hljs-name {
+	color: #569CD6;
+}
+.hljs-link {
+	color: #569CD6;
+	text-decoration: underline;
+}
+
+.hljs-built_in,
+.hljs-type {
+	color: #4EC9B0;
+}
+
+.hljs-number,
+.hljs-class {
+	color: #B8D7A3;
+}
+
+.hljs-string,
+.hljs-meta-string {
+	color: #D69D85;
+}
+
+.hljs-regexp,
+.hljs-template-tag {
+	color: #9A5334;
+}
+
+.hljs-subst,
+.hljs-function,
+.hljs-title,
+.hljs-params,
+.hljs-formula {
+	color: #DCDCDC;
+}
+
+.hljs-comment,
+.hljs-quote {
+	color: #57A64A;
+	font-style: italic;
+}
+
+.hljs-doctag {
+	color: #608B4E;
+}
+
+.hljs-meta,
+.hljs-meta-keyword,
+.hljs-tag {
+	color: #9B9B9B;
+}
+
+.hljs-variable,
+.hljs-template-variable {
+	color: #BD63C5;
+}
+
+.hljs-attr,
+.hljs-attribute,
+.hljs-builtin-name {
+	color: #9CDCFE;
+}
+
+.hljs-section {
+	color: gold;
+}
+
+.hljs-emphasis {
+	font-style: italic;
+}
+
+.hljs-strong {
+	font-weight: bold;
+}
+
+/*.hljs-code {
+	font-family:'Monospace';
+}*/
+
+.hljs-bullet,
+.hljs-selector-tag,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-selector-attr,
+.hljs-selector-pseudo {
+	color: #D7BA7D;
+}
+
+.hljs-addition {
+	background-color: var(--vscode-diffEditor-insertedTextBackground, rgba(155, 185, 85, 0.2));
+	color: rgb(155, 185, 85);
+	display: inline-block;
+	width: 100%;
+}
+
+.hljs-deletion {
+	background: var(--vscode-diffEditor-removedTextBackground, rgba(255, 0, 0, 0.2));
+	color: rgb(255, 0, 0);
+	display: inline-block;
+	width: 100%;
+}
+
+
+/*
+From https://raw.githubusercontent.com/isagalaev/highlight.js/master/src/styles/vs.css
+*/
+/*
+
+Visual Studio-like style based on original C# coloring by Jason Diamond <jason@diamond.name>
+
+*/
+
+.vscode-light .hljs-function,
+.vscode-light .hljs-params,
+.vscode-light .hljs-number,
+.vscode-light .hljs-class  {
+	color: inherit;
+}
+
+.vscode-light .hljs-comment,
+.vscode-light .hljs-quote,
+.vscode-light .hljs-number,
+.vscode-light .hljs-class,
+.vscode-light .hljs-variable {
+	color: #008000;
+}
+
+.vscode-light .hljs-keyword,
+.vscode-light .hljs-selector-tag,
+.vscode-light .hljs-name,
+.vscode-light .hljs-tag {
+	color: #00f;
+}
+
+.vscode-light .hljs-built_in,
+.vscode-light .hljs-builtin-name {
+	color: #007acc;
+}
+
+.vscode-light .hljs-string,
+.vscode-light .hljs-section,
+.vscode-light .hljs-attribute,
+.vscode-light .hljs-literal,
+.vscode-light .hljs-template-tag,
+.vscode-light .hljs-template-variable,
+.vscode-light .hljs-type {
+	color: #a31515;
+}
+
+.vscode-light .hljs-subst,
+.vscode-light .hljs-selector-attr,
+.vscode-light .hljs-selector-pseudo,
+.vscode-light .hljs-meta,
+.vscode-light .hljs-meta-keyword {
+	color: #2b91af;
+}
+.vscode-light .hljs-title,
+.vscode-light .hljs-doctag {
+	color: #808080;
+}
+
+.vscode-light .hljs-attr {
+	color: #f00;
+}
+
+.vscode-light .hljs-symbol,
+.vscode-light .hljs-bullet,
+.vscode-light .hljs-link {
+	color: #00b0e8;
+}
+
+
+.vscode-light .hljs-emphasis {
+	font-style: italic;
+}
+
+.vscode-light .hljs-strong {
+	font-weight: bold;
+}
+</style><style>/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.vscode-dark img[src$=\#gh-light-mode-only],
+.vscode-light img[src$=\#gh-dark-mode-only],
+.vscode-high-contrast:not(.vscode-high-contrast-light) img[src$=\#gh-light-mode-only],
+.vscode-high-contrast-light img[src$=\#gh-dark-mode-only] {
+	display: none;
+}
+</style><style>/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.katex-error {
+	color: var(--vscode-editorError-foreground);
+}
+</style><style>.task-list-item {
+    list-style-type: none;
+}
+
+.task-list-item-checkbox {
+    margin-left: -20px;
+    vertical-align: middle;
+    pointer-events: none;
+}</style><style>:root {
+  --color-note: #0969da;
+  --color-tip: #1a7f37;
+  --color-warning: #9a6700;
+  --color-severe: #bc4c00;
+  --color-caution: #d1242f;
+  --color-important: #8250df;
+}
+</style><style>@media (prefers-color-scheme: dark) {
+  :root {
+    --color-note: #2f81f7;
+    --color-tip: #3fb950;
+    --color-warning: #d29922;
+    --color-severe: #db6d28;
+    --color-caution: #f85149;
+    --color-important: #a371f7;
+  }
+}
+</style><style>.markdown-alert {
+  padding: 0.5rem 1rem;
+  margin-bottom: 16px;
+  color: inherit;
+  border-left: .25em solid #888;
+}
+
+.markdown-alert>:first-child {
+  margin-top: 0
+}
+
+.markdown-alert>:last-child {
+  margin-bottom: 0
+}
+
+.markdown-alert .markdown-alert-title {
+  display: flex;
+  font-weight: 500;
+  align-items: center;
+  line-height: 1
+}
+
+.markdown-alert .markdown-alert-title .octicon {
+  margin-right: 0.5rem;
+  display: inline-block;
+  overflow: visible !important;
+  vertical-align: text-bottom;
+  fill: currentColor;
+}
+
+.markdown-alert.markdown-alert-note {
+  border-left-color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-note .markdown-alert-title {
+  color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-important {
+  border-left-color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-important .markdown-alert-title {
+  color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-warning {
+  border-left-color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-warning .markdown-alert-title {
+  color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-tip {
+  border-left-color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-tip .markdown-alert-title {
+  color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-caution {
+  border-left-color: var(--color-caution);
+}
+
+.markdown-alert.markdown-alert-caution .markdown-alert-title {
+  color: var(--color-caution);
+}
+</style><style>
+.mermaid-diagram { margin: 1em 0; text-align: center; break-inside: avoid; }
+.mermaid-diagram svg { max-width: 100%; height: auto; }
+img { max-width: 100%; break-inside: avoid; }
+h1, h2, h3, h4, h5, h6 { break-after: avoid; }
+.task-list-item { list-style-type: none; }
+.task-list-item-checkbox { margin: 0 0.2em 0.25em -1.4em; vertical-align: middle; }
+</style><style>body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', system-ui, 'Ubuntu', 'Droid Sans', sans-serif; font-size: 14px; line-height: 1.6; }</style></head><body class="vscode-body vscode-light">
+				<h1 id="accesssqlite--vba-class-library--orm-for-microsoft-access">AccessSQLite — VBA Class Library &amp; ORM for Microsoft Access</h1>
+<p><code>AccessSQLite</code> is a self-contained, 32-bit and 64-bit Microsoft Access VBA class library and lightweight Object-Relational Mapper (ORM) for SQLite 3. It supports zero-deployment execution via Windows' built-in <code>winsqlite3.dll</code> as well as a portable bundled <code>sqlite3.dll</code> fallback, automatic SMB/UNC vs. local-disk pragma profiles, prepared statement caching, fluent query building, dual-mode <code>Dictionary</code> and strongly-typed <code>ISQLiteEntity</code> repositories, batch eager loading, schema migrations, and bidirectional Access DAO data transfer.</p>
+<hr>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+<li><a href="#1-directory-layout">Directory Layout</a></li>
+<li><a href="#2-installation--referencing-guide">Installation &amp; Referencing Guide</a></li>
+<li><a href="#3-quick-start-examples">Quick-Start Examples</a></li>
+<li><a href="#4-architecture-overview">Architecture Overview</a></li>
+<li><a href="#5-driver-layer--pragma-profiles">Driver Layer &amp; Pragma Profiles</a></li>
+<li><a href="#6-core-sql-engine-clssqliteconnection--clssqlitestatement">Core SQL Engine (<code>clsSQLiteConnection</code> &amp; <code>clsSQLiteStatement</code>)</a></li>
+<li><a href="#7-schema-mapping-validation--reflection">Schema Mapping, Validation &amp; Reflection</a></li>
+<li><a href="#8-fluent-query-builder-clssqlitequerybuilder">Fluent Query Builder (<code>clsSQLiteQueryBuilder</code>)</a></li>
+<li><a href="#9-orm-repositories-typed-entities-eager-loading--unit-of-work">ORM Repositories, Typed Entities, Eager Loading &amp; Unit of Work</a></li>
+<li><a href="#10-entity-class-generator-modsqliteentitygen">Entity Class Generator (<code>modSQLiteEntityGen</code>)</a></li>
+<li><a href="#11-versioned-schema-migrations-clssqlitemigrator">Versioned Schema Migrations (<code>clsSQLiteMigrator</code>)</a></li>
+<li><a href="#12-access-dao---sqlite-bridge-clssqliteaccessbridge">Access DAO &lt;-&gt; SQLite Bridge (<code>clsSQLiteAccessBridge</code>)</a></li>
+<li><a href="#13-data-type-marshaling--edge-case-guarantees">Data Type Marshaling &amp; Edge-Case Guarantees</a></li>
+<li><a href="#14-error-handling--diagnostics">Error Handling &amp; Diagnostics</a></li>
+<li><a href="#15-developer-internals-testing--contribution-notes">Developer Internals, Testing &amp; Contribution Notes</a></li>
+</ol>
+<hr>
+<h2 id="1-directory-layout">1. Directory Layout</h2>
+<table>
+<thead>
+<tr>
+<th>File / Folder</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="AccessSQLite.accdb"><code>./AccessSQLite.accdb</code></a></td>
+<td>Host Access class-library database (VBA Project Name: <code>AccessSQLite</code>; public classes set <code>Attribute VB_Exposed = True</code>)</td>
+</tr>
+<tr>
+<td><a href="sqlite3.dll"><code>./sqlite3.dll</code></a></td>
+<td>Bundled <strong>32-bit (<code>x86</code>)</strong> SQLite <code>3.45.3</code> engine used by <code>clsSQLiteBundledDriver</code> under 32-bit Microsoft Access</td>
+</tr>
+<tr>
+<td><a href="SQLite3_StdCall.dll"><code>./SQLite3_StdCall.dll</code></a></td>
+<td>Bundled <strong>32-bit (<code>x86</code>)</strong> <code>__stdcall</code> thunk wrapper used alongside 32-bit <code>sqlite3.dll</code></td>
+</tr>
+<tr>
+<td><a href="x64/sqlite3.dll"><code>./x64/sqlite3.dll</code></a></td>
+<td>Bundled <strong>64-bit (<code>x64</code>)</strong> SQLite engine isolated in <code>x64\</code> for 64-bit Microsoft Access</td>
+</tr>
+<tr>
+<td><a href="AccessSQLite_Test.db"><code>./AccessSQLite_Test.db</code></a></td>
+<td>Sample/test SQLite database configured with SMB-safe <code>journal_mode = DELETE</code></td>
+</tr>
+<tr>
+<td><a href="README.html"><code>./README.md</code></a></td>
+<td>Developer and usage documentation</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="2-installation--referencing-guide">2. Installation &amp; Referencing Guide</h2>
+<p>You can use <code>AccessSQLite</code> in two ways:</p>
+<h3 id="option-a--reference-accesssqliteaccdb-as-an-external-class-library-recommended">Option A — Reference <code>AccessSQLite.accdb</code> as an External Class Library (Recommended)</h3>
+<ol>
+<li>Open your front-end <code>.accdb</code> in Microsoft Access and press <strong>Alt+F11</strong> to open the VBA Editor.</li>
+<li>Select <strong>Tools -&gt; References...</strong></li>
+<li>Ensure <strong><code>Microsoft Scripting Runtime</code></strong> (<code>scrrun.dll</code>, for <code>Scripting.Dictionary</code>) and <strong><code>Microsoft Office 16.0 Access database engine Object Library</code></strong> (<code>DAO</code>) are checked.</li>
+<li>Click <strong>Browse...</strong>, change the file filter to <strong>Microsoft Access Databases (<code>*.accdb</code>)</strong>, and select <code>AccessSQLite.accdb</code>.</li>
+<li>Verify <strong><code>AccessSQLite</code></strong> appears checked in your References list, then click <strong>Debug -&gt; Compile</strong>.</li>
+</ol>
+<blockquote>
+<p><strong>Why <code>modSQLiteFactory</code> exists:</strong> Office VBA class modules in referenced libraries expose <code>PublicNotCreatable</code> (<code>Attribute VB_Exposed = True</code>, <code>Attribute VB_Creatable = False</code>). External <code>.accdb</code> projects declare variables with full early-bound IntelliSense (<code>Dim db As AccessSQLite.clsSQLiteConnection</code>) and instantiate them through <code>AccessSQLite.OpenSQLite(...)</code>, <code>AccessSQLite.OpenSQLiteMemory(...)</code>, or <code>AccessSQLite.NewSQLiteTableMap(...)</code>.</p>
+</blockquote>
+<h3 id="option-b--import-modules-directly-into-a-single-file-accdb">Option B — Import Modules Directly into a Single-File <code>.accdb</code></h3>
+<p>Copy or import the standard modules (<code>modSQLiteTypes</code>, <code>modSQLiteFactory</code>, <code>modSQLiteEntityGen</code>) and class modules (<code>ISQLiteDriver</code>, <code>clsSQLiteWinDriver</code>, <code>clsSQLiteBundledDriver</code>, <code>clsSQLiteStatement</code>, <code>clsSQLiteConnection</code>, <code>clsSQLiteColumnDef</code>, <code>clsSQLiteTableMap</code>, <code>clsSQLiteSchema</code>, <code>clsSQLiteQueryBuilder</code>, <code>ISQLiteEntity</code>, <code>clsSQLiteRepository</code>, <code>clsSQLiteUnitOfWork</code>, <code>clsSQLiteMigrator</code>, <code>clsSQLiteAccessBridge</code>) directly into your database. If you only target Windows 10/11+, <code>winsqlite3.dll</code> requires <strong>zero external DLL files</strong>.</p>
+<hr>
+<h2 id="3-quick-start-examples">3. Quick-Start Examples</h2>
+<h3 id="raw-parameterized-sql-clssqliteconnection">Raw Parameterized SQL (<code>clsSQLiteConnection</code>)</h3>
+<pre><code class="language-vba">Public Sub QuickRawSqlDemo()
+    Dim db As AccessSQLite.clsSQLiteConnection
+    Dim rows As Collection
+    Dim row As Scripting.Dictionary
+
+    ' Auto-selects winsqlite3.dll and chooses WAL (local disk) or DELETE (UNC/SMB share)
+    Set db = AccessSQLite.OpenSQLite(CurrentProject.Path &amp; "\AppData.db")
+
+    db.ExecuteScript _
+        "CREATE TABLE IF NOT EXISTS Customers (" &amp; _
+        "  CustomerID INTEGER PRIMARY KEY AUTOINCREMENT," &amp; _
+        "  CustomerName TEXT NOT NULL," &amp; _
+        "  CreditLimit CURRENCY NOT NULL DEFAULT 0," &amp; _
+        "  IsActive BOOLEAN NOT NULL DEFAULT 1" &amp; _
+        ");"
+
+    ' Positional (?) parameters
+    db.ExecuteSql "INSERT INTO Customers (CustomerName, CreditLimit, IsActive) VALUES (?, ?, ?);", _
+                  "Northwind Traders", 25000.5@, True
+
+    ' Named (@key) parameter pairs — familiar to DAO/clsDb users
+    Set rows = db.QueryRowsRaw( _
+        "SELECT * FROM Customers WHERE IsActive = @active AND CreditLimit &gt;= @minLimit ORDER BY CustomerName;", _
+        "@active", True, "@minLimit", 10000@)
+
+    For Each row In rows
+        Debug.Print row("CustomerID"), row("CustomerName"), row("CreditLimit"), row("IsActive")
+    Next row
+
+    db.CloseConnection
+End Sub
+</code></pre>
+<h3 id="schema-definition-repository-crud--fluent-query-builder">Schema Definition, Repository CRUD &amp; Fluent Query Builder</h3>
+<pre><code class="language-vba">Public Sub QuickOrmDemo()
+    Dim db As AccessSQLite.clsSQLiteConnection
+    Dim mapTasks As AccessSQLite.clsSQLiteTableMap
+    Dim repoTasks As AccessSQLite.clsSQLiteRepository
+    Dim payload As Scripting.Dictionary
+    Dim newTaskId As Long
+    Dim dueSoon As Collection
+
+    Set db = AccessSQLite.OpenSQLiteMemory()
+
+    ' 1. Define schema with validation rules, auto-timestamps, and soft-delete support
+    Set mapTasks = db.DefineTable("Tasks", "TaskID") _
+        .AddPrimaryKey("TaskID", sqColInt64, True) _
+        .AddColumn("TitleText", sqColText, "Task title", blnRequired:=True, lngMaxLength:=120) _
+        .AddColumn("PriorityRank", sqColLong, "Priority", blnRequired:=True, varDefault:=3) _
+        .AddColumn("EstimateCost", sqColCurrency, "Estimated cost", varDefault:=0@) _
+        .AddColumn("IsCompleted", sqColBoolean, "Completed", varDefault:=False) _
+        .AddColumn("DueDate", sqColDate, "Due date") _
+        .AddTimestamps("CreatedAt", "UpdatedAt") _
+        .AddSoftDelete("DeletedAt") _
+        .AddIndex("idx_Tasks_Priority", "PriorityRank ASC")
+
+    db.SchemaManager().EnsureTable mapTasks
+    Set repoTasks = db.Repository("Tasks")
+
+    ' 2. Insert via Dictionary (auto-validates, coerces types, and stamps CreatedAt/UpdatedAt)
+    Set payload = AccessSQLite.NewTextDict()
+    payload("TitleText") = "Prepare Q4 financial export"
+    payload("PriorityRank") = 1
+    payload("EstimateCost") = 850.75@
+    payload("DueDate") = DateSerial(2026, 12, 15)
+    newTaskId = CLng(repoTasks.InsertRecord(payload))
+
+    ' 3. Query with the fluent parameterized QueryBuilder
+    Set dueSoon = repoTasks.NewQuery() _
+        .WhereEq("IsCompleted", False) _
+        .WhereOp("PriorityRank", "&lt;=", 2) _
+        .OrderByCol("PriorityRank") _
+        .Page(1, 20) _
+        .ToRowsRaw()
+
+    Debug.Print "Inserted TaskID=" &amp; newTaskId &amp; ", Matching Active Tasks=" &amp; dueSoon.Count
+    db.CloseConnection
+End Sub
+</code></pre>
+<hr>
+<h2 id="4-architecture-overview">4. Architecture Overview</h2>
+<p><code>AccessSQLite</code> is organized into four clean layers plus a public class-library entry module:</p>
+<pre><code class="language-text">+-----------------------------------------------------------------------------------+
+| Public Library Surface (Tools -&gt; References -&gt; AccessSQLite.accdb)                |
+|   modSQLiteFactory  |  modSQLiteTypes                                             |
++-----------------------------------------------------------------------------------+
+| Layer 4: ORM, Query Builder, Migrations &amp; Access DAO Bridge                       |
+|   ISQLiteEntity        clsSQLiteRepository    clsSQLiteUnitOfWork                 |
+|   clsSQLiteQueryBuilder clsSQLiteMigrator     clsSQLiteAccessBridge               |
+|   modSQLiteEntityGen                                                              |
++-----------------------------------------------------------------------------------+
+| Layer 3: Schema Metadata, Validation &amp; Reflection                                 |
+|   clsSQLiteColumnDef   clsSQLiteTableMap      clsSQLiteSchema                     |
++-----------------------------------------------------------------------------------+
+| Layer 2: Connection Management, Prepared Statement Cache &amp; Savepoints             |
+|   clsSQLiteConnection  clsSQLiteStatement                                         |
++-----------------------------------------------------------------------------------+
+| Layer 1: Pluggable Native C-API Drivers (32-bit &amp; 64-bit VBA7)                    |
+|   ISQLiteDriver        clsSQLiteWinDriver     clsSQLiteBundledDriver              |
++-----------------------------------------------------------------------------------+
+</code></pre>
+<hr>
+<h2 id="5-driver-layer--pragma-profiles">5. Driver Layer &amp; Pragma Profiles</h2>
+<h3 id="driver-selection-sqlitedriverkind">Driver Selection (<code>SQLiteDriverKind</code>)</h3>
+<table>
+<thead>
+<tr>
+<th>Enum Value</th>
+<th>Driver Class</th>
+<th>How It Works</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sqDriverAuto</code> <em>(default)</em></td>
+<td><code>clsSQLiteWinDriver</code> -&gt; <code>clsSQLiteBundledDriver</code></td>
+<td>Tries <code>winsqlite3.dll</code> first; automatically falls back to the bundled DLLs if <code>winsqlite3.dll</code> is unavailable.</td>
+</tr>
+<tr>
+<td><code>sqDriverWinSqlite</code></td>
+<td><code>clsSQLiteWinDriver</code></td>
+<td>Uses <code>C:\Windows\SysWOW64\winsqlite3.dll</code> (32-bit Access) or <code>C:\Windows\System32\winsqlite3.dll</code> (64-bit Access). Microsoft compiles <code>winsqlite3.dll</code> with <code>__stdcall</code> and undecorated exports on both architectures — zero external DLL deployment needed.</td>
+</tr>
+<tr>
+<td><code>sqDriverBundled</code></td>
+<td><code>clsSQLiteBundledDriver</code></td>
+<td>Resolves DLLs relative to <code>CodeProject.Path</code> (the folder containing <code>AccessSQLite.accdb</code>, or a custom <code>strDllDirectory</code>): loads <code>sqlite3.dll</code> + <code>SQLite3_StdCall.dll</code> on 32-bit Access (bridging newer C exports like <code>sqlite3_column_decltype16</code> and <code>sqlite3_expanded_sql</code> via <code>DispCallFunc</code>) or <code>x64\sqlite3.dll</code> on 64-bit Access.</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Important <code>winsqlite3.dll</code> Note (<code>OMIT_LOCALTIME</code>):</strong> Microsoft builds <code>winsqlite3.dll</code> with <code>OMIT_LOCALTIME</code>, so SQL expressions must not call <code>datetime('now', 'localtime')</code>. Use <code>UtcNowIsoString()</code> / VBA <code>Now</code> for local timestamps or SQLite <code>datetime('now')</code> for UTC.</p>
+</blockquote>
+<h3 id="automatic-pragma-profiles-sqlitepragmaprofile">Automatic Pragma Profiles (<code>SQLitePragmaProfile</code>)</h3>
+<p>SQLite's <code>WAL</code> mode relies on memory-mapped <code>-shm</code> shared memory and can corrupt databases placed on multi-user SMB/UNC network shares (<code>K:\...</code> or <code>\\server\share\...</code>). <code>OpenSQLite</code> inspects the target path via Win32 <code>GetDriveTypeW</code> and applies safe defaults automatically:</p>
+<table>
+<thead>
+<tr>
+<th>Enum Value</th>
+<th>Pragmas Applied</th>
+<th>When Selected by <code>sqProfileAuto</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sqProfileLocalWal</code></td>
+<td><code>journal_mode=WAL</code>, <code>synchronous=NORMAL</code>, <code>foreign_keys=ON</code>, <code>temp_store=MEMORY</code>, <code>busy_timeout=5000</code></td>
+<td>Local fixed/SSD drives (<code>C:\...</code>)</td>
+</tr>
+<tr>
+<td><code>sqProfileNetworkSafe</code></td>
+<td><code>journal_mode=DELETE</code>, <code>synchronous=FULL</code>, <code>foreign_keys=ON</code>, <code>temp_store=MEMORY</code>, <code>busy_timeout=5000</code></td>
+<td>UNC paths (<code>\\...</code>) and mapped remote drives (<code>DRIVE_REMOTE</code>, e.g., <code>K:\...</code>)</td>
+</tr>
+<tr>
+<td><code>sqProfileReadOnly</code></td>
+<td><code>query_only=ON</code>, <code>temp_store=MEMORY</code>, <code>busy_timeout=5000</code></td>
+<td>When <code>sqOpenReadOnly</code> flag or <code>sqProfileReadOnly</code> is passed</td>
+</tr>
+<tr>
+<td><code>sqProfileInMemory</code></td>
+<td><code>foreign_keys=ON</code>, <code>temp_store=MEMORY</code>, <code>busy_timeout=5000</code></td>
+<td><code>:memory:</code> or <code>sqOpenMemory</code> connections</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="6-core-sql-engine-clssqliteconnection--clssqlitestatement">6. Core SQL Engine (<code>clsSQLiteConnection</code> &amp; <code>clsSQLiteStatement</code>)</h2>
+<h3 id="opening--closing-connections">Opening &amp; Closing Connections</h3>
+<pre><code class="language-vba">' File-backed connection (creates file if absent unless sqProfileReadOnly)
+Dim db As AccessSQLite.clsSQLiteConnection
+Set db = AccessSQLite.OpenSQLite("C:\Data\Inventory.db")
+
+' Explicit driver or read-only mode
+Set db = AccessSQLite.OpenSQLite("K:\Shared\Archive.db", sqProfileReadOnly, sqDriverBundled)
+
+' Fast isolated in-memory database
+Set db = AccessSQLite.OpenSQLiteMemory()
+
+' Always close when finished (also auto-closed in Class_Terminate)
+db.CloseConnection
+</code></pre>
+<h3 id="parameter-binding-styles">Parameter Binding Styles</h3>
+<p>Every query and execution method on <code>clsSQLiteConnection</code> routes through <code>clsSQLiteStatement.BindFlexibleParams</code>, supporting four parameter styles interchangeably:</p>
+<ol>
+<li><strong>Positional <code>?</code> parameters:</strong><pre><code class="language-vba">db.ExecuteSql "UPDATE Products SET UnitPrice = ? WHERE ProductID = ?;", 19.95@, 42
+</code></pre>
+</li>
+<li><strong>Named <code>@key</code> / <code>:key</code> / <code>$key</code> pairs in <code>ParamArray</code>:</strong><pre><code class="language-vba">Set row = db.QueryOneRow("SELECT * FROM Products WHERE ProductCode = @code;", "@code", "NW-100")
+</code></pre>
+</li>
+<li><strong>Named <code>Scripting.Dictionary</code> (<code>ExecuteNamed</code> or passed directly):</strong><pre><code class="language-vba">Dim p As Scripting.Dictionary
+Set p = AccessSQLite.NewTextDict()
+p("code") = "NW-100"   ' Matches @code, :code, or $code automatically
+Set row = db.QueryOneRow("SELECT * FROM Products WHERE ProductCode = @code;", p)
+</code></pre>
+</li>
+<li><strong>Positional <code>Collection</code> or <code>Variant()</code> array:</strong><pre><code class="language-vba">Dim args As New Collection
+args.Add 10: args.Add 20
+Set rows = db.QueryRows("SELECT * FROM Products WHERE ProductID IN (?, ?);", args)
+</code></pre>
+</li>
+</ol>
+<blockquote>
+<p><strong>Positional <code>@</code> Disambiguation:</strong> If a SQL statement uses positional <code>?</code> placeholders and your data value starts with <code>"@"</code> (e.g., <code>"@johndoe"</code>), <code>ResolveNamedParamIndex</code> verifies against the compiled statement's parameter metadata first so <code>"@johndoe"</code> is bound safely as a positional string value rather than misread as a parameter name.</p>
+</blockquote>
+<h3 id="query-methods-summary-clssqliteconnection">Query Methods Summary (<code>clsSQLiteConnection</code>)</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Return Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ExecuteSql(strSql, ParamArray varParams())</code></td>
+<td><code>Long</code></td>
+<td>Runs <code>INSERT</code>/<code>UPDATE</code>/<code>DELETE</code>/DDL and returns <code>ChangesCount</code> (rows affected by this statement).</td>
+</tr>
+<tr>
+<td><code>ExecuteNamed(strSql, dictParams)</code></td>
+<td><code>Long</code></td>
+<td>Runs a statement with parameters from a <code>Scripting.Dictionary</code>.</td>
+</tr>
+<tr>
+<td><code>ExecuteScript(strMultiSql)</code></td>
+<td><code>Long</code></td>
+<td>Executes multi-statement SQL scripts (<code>;</code>-delimited DDL/seeds) via SQLite's native UTF-16 tail pointer and returns the number of statements executed.</td>
+</tr>
+<tr>
+<td><code>QueryRows(strSql, ParamArray varParams())</code></td>
+<td><code>Collection</code></td>
+<td>Returns a <code>Collection</code> of case-insensitive <code>Scripting.Dictionary</code> rows; dates remain JSON-ready ISO-8601 strings.</td>
+</tr>
+<tr>
+<td><code>QueryRowsRaw(strSql, ParamArray varParams())</code></td>
+<td><code>Collection</code></td>
+<td>Returns <code>Scripting.Dictionary</code> rows hydrated to native VBA <code>Boolean</code>, <code>Currency</code>, and <code>Date</code> types based on declared column types.</td>
+</tr>
+<tr>
+<td><code>QueryOneRow</code> / <code>QueryOneRowRaw</code></td>
+<td><code>Scripting.Dictionary</code></td>
+<td>Returns the first matching row, or <code>Nothing</code> when 0 rows match.</td>
+</tr>
+<tr>
+<td><code>QueryScalar(strSql, ParamArray varParams())</code></td>
+<td><code>Variant</code></td>
+<td>Returns column <code>0</code> of row <code>1</code>, or <code>Null</code> when 0 rows match.</td>
+</tr>
+<tr>
+<td><code>LastInsertRowId</code></td>
+<td><code>Variant</code></td>
+<td>Returns <code>Long</code> (or <code>Currency</code>/<code>LongLong</code> when <code>&gt; 2,147,483,647</code>) of the most recent <code>INSERT</code>.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="prepared-statement-cache">Prepared Statement Cache</h3>
+<ul>
+<li>Enabled by default (<code>db.StatementCacheEnabled = True</code>, capacity <code>128</code> statements).</li>
+<li>Single-statement <code>SELECT</code>, <code>WITH</code>, <code>INSERT</code>, <code>UPDATE</code>, <code>DELETE</code>, and <code>REPLACE</code> strings are prepared with <code>SQLITE_PREPARE_PERSISTENT</code> and reused across calls, automatically calling <code>sqlite3_reset</code> and <code>sqlite3_clear_bindings</code> after every run (including on error).</li>
+<li>Calling <code>db.VacuumDb()</code>, changing <code>db.DateStorage</code>, or calling <code>db.ClearStatementCache()</code> finalizes and clears cached handles cleanly.</li>
+</ul>
+<h3 id="transactions--nested-savepoints">Transactions &amp; Nested Savepoints</h3>
+<p><code>BeginTrans</code>, <code>CommitTrans</code>, and <code>RollbackTrans</code> support arbitrary nesting:</p>
+<ul>
+<li><strong>Depth <code>0 -&gt; 1</code>:</strong> Issues <code>BEGIN IMMEDIATE TRANSACTION;</code> (acquires the reserved write lock upfront instead of failing mid-transaction with <code>SQLITE_BUSY</code> lock-upgrade deadlocks).</li>
+<li><strong>Depth <code>1 -&gt; N</code>:</strong> Issues <code>SAVEPOINT sp_orm_&lt;N&gt;;</code>.</li>
+<li><strong><code>RollbackTrans</code> at depth <code>&gt; 1</code>:</strong> Rolls back only the inner savepoint (<code>ROLLBACK TO SAVEPOINT sp_orm_&lt;N&gt;; RELEASE SAVEPOINT sp_orm_&lt;N&gt;;</code>), leaving outer work intact.</li>
+</ul>
+<pre><code class="language-vba">db.BeginTrans
+On Error GoTo TxError
+    db.ExecuteSql "INSERT INTO Orders (CustomerName) VALUES (?);", "Alpine Ski House"
+    
+    db.BeginTrans ' Creates SAVEPOINT sp_orm_2
+        db.ExecuteSql "INSERT INTO AuditNotes (NoteText) VALUES (?);", "Optional step"
+    db.RollbackTrans ' Discards only sp_orm_2; Alpine Ski House insert stays staged!
+
+db.CommitTrans
+Exit Sub
+
+TxError:
+    db.RollbackTrans
+    Err.Raise Err.Number, Err.Source, Err.Description
+</code></pre>
+<h3 id="maintenance--sql-timing-trace">Maintenance &amp; SQL Timing Trace</h3>
+<ul>
+<li><strong><code>db.StartTrace</code> / <code>db.StopTrace() As String</code>:</strong> Records sub-millisecond <code>QueryPerformanceCounter</code> durations alongside <code>sqlite3_expanded_sql</code> (with bound values interpolated for debugging).</li>
+<li><strong><code>db.BackupToFile "C:\Backups\AppData_Backup.db"</code>:</strong> Uses the native SQLite Online Backup C API (<code>sqlite3_backup_init</code> / <code>step</code> / <code>finish</code>) to snapshot a live open database safely.</li>
+<li><strong><code>db.IntegrityCheck() As Boolean</code>:</strong> Runs <code>PRAGMA integrity_check;</code> and returns <code>True</code> when <code>"ok"</code>.</li>
+<li><strong><code>db.VacuumDb</code>:</strong> Clears cached statements and runs <code>VACUUM;</code> (must be called outside a transaction).</li>
+</ul>
+<hr>
+<h2 id="7-schema-mapping-validation--reflection">7. Schema Mapping, Validation &amp; Reflection</h2>
+<h3 id="logical-column-types-sqlitecolumnkind">Logical Column Types (<code>SQLiteColumnKind</code>)</h3>
+<table>
+<thead>
+<tr>
+<th><code>SQLiteColumnKind</code></th>
+<th>Standard SQLite DDL</th>
+<th><code>STRICT</code> Mode DDL</th>
+<th>Coerced VBA Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sqColText</code></td>
+<td><code>TEXT</code></td>
+<td><code>TEXT</code></td>
+<td><code>String</code> (enforces <code>lngMaxLength</code> when <code>&gt; 0</code>)</td>
+</tr>
+<tr>
+<td><code>sqColMemo</code></td>
+<td><code>TEXT</code></td>
+<td><code>TEXT</code></td>
+<td><code>String</code> (unbounded length)</td>
+</tr>
+<tr>
+<td><code>sqColLong</code></td>
+<td><code>INTEGER</code></td>
+<td><code>INTEGER</code></td>
+<td><code>Long</code> (<code>-2,147,483,648 .. 2,147,483,647</code>)</td>
+</tr>
+<tr>
+<td><code>sqColInt64</code></td>
+<td><code>INTEGER</code></td>
+<td><code>INTEGER</code></td>
+<td><code>Long</code> within 32-bit range; <code>Currency</code> / <code>LongLong</code> above 32-bit</td>
+</tr>
+<tr>
+<td><code>sqColDouble</code></td>
+<td><code>REAL</code></td>
+<td><code>REAL</code></td>
+<td><code>Double</code></td>
+</tr>
+<tr>
+<td><code>sqColCurrency</code></td>
+<td><code>CURRENCY</code></td>
+<td><code>REAL</code></td>
+<td><code>Currency</code> (4-decimal fixed-point in VBA)</td>
+</tr>
+<tr>
+<td><code>sqColBoolean</code></td>
+<td><code>BOOLEAN</code></td>
+<td><code>INTEGER</code></td>
+<td><code>Boolean</code> (stored as <code>1</code> / <code>0</code> in SQLite)</td>
+</tr>
+<tr>
+<td><code>sqColDate</code></td>
+<td><code>DATE</code></td>
+<td><code>TEXT</code></td>
+<td><code>Date</code> (date-only <code>Int(d)</code>, default ISO <code>"yyyy-mm-dd"</code>)</td>
+</tr>
+<tr>
+<td><code>sqColDateTime</code></td>
+<td><code>DATETIME</code></td>
+<td><code>TEXT</code></td>
+<td><code>Date</code> (date+time, default ISO <code>"yyyy-mm-ddThh:nn:ss"</code>)</td>
+</tr>
+<tr>
+<td><code>sqColBlob</code></td>
+<td><code>BLOB</code></td>
+<td><code>BLOB</code></td>
+<td><code>Byte()</code></td>
+</tr>
+<tr>
+<td><code>sqColJson</code></td>
+<td><code>JSON</code></td>
+<td><code>TEXT</code></td>
+<td><code>String</code></td>
+</tr>
+<tr>
+<td><code>sqColGuid</code></td>
+<td><code>GUID</code></td>
+<td><code>TEXT</code></td>
+<td><code>String</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="building-a-clssqlitetablemap">Building a <code>clsSQLiteTableMap</code></h3>
+<pre><code class="language-vba">Dim mapEmp As AccessSQLite.clsSQLiteTableMap
+Set mapEmp = db.DefineTable("Employees", "EmployeeID") _
+    .SetStrict(True) _
+    .AddPrimaryKey("EmployeeID", sqColInt64, blnAutoIncrement:=True) _
+    .AddColumn("BadgeCode", sqColText, "Badge code", blnRequired:=True, lngMaxLength:=16, blnUnique:=True) _
+    .AddColumn("FullName", sqColText, "Full name", blnRequired:=True, lngMaxLength:=100) _
+    .AddColumn("DepartmentID", sqColLong, "Department", blnRequired:=True, _
+               strFkTable:="Departments", strFkColumn:="DepartmentID", strOnDelete:="RESTRICT") _
+    .AddColumn("HourlyRate", sqColCurrency, "Hourly rate", varDefault:=0@) _
+    .AddColumn("HireDate", sqColDate, "Hire date") _
+    .AddTimestamps("CreatedAt", "UpdatedAt") _
+    .AddSoftDelete("DeletedAt") _
+    .AddIndex("idx_Employees_Dept", "DepartmentID")
+
+' Creates table + indexes if missing, or runs additive ALTER TABLE ADD COLUMN for new mapped columns
+db.SchemaManager().EnsureTable mapEmp, blnSyncAdditiveColumns:=True
+</code></pre>
+<h3 id="reverse-engineering-existing-sqlite-tables-reflecttablemap">Reverse-Engineering Existing SQLite Tables (<code>ReflectTableMap</code>)</h3>
+<p>If you open a pre-existing SQLite database without calling <code>DefineTable</code>, calling <code>db.Repository("ExistingTable")</code> or <code>db.SchemaManager().ReflectTableMap("ExistingTable")</code> automatically inspects <code>PRAGMA table_xinfo</code> and <code>PRAGMA foreign_key_list</code> to construct a <code>clsSQLiteTableMap</code> (including <code>STRICT</code> detection and conventional <code>CreatedAt</code> / <code>UpdatedAt</code> / <code>DeletedAt</code> columns).</p>
+<hr>
+<h2 id="8-fluent-query-builder-clssqlitequerybuilder">8. Fluent Query Builder (<code>clsSQLiteQueryBuilder</code>)</h2>
+<p>Create a builder via <code>db.FromTable("TableName", Optional "alias")</code> or <code>repo.NewQuery(Optional "alias")</code> (the repository version automatically attaches the <code>clsSQLiteTableMap</code> for native type hydration and soft-delete filtering).</p>
+<h3 id="clause-reference">Clause Reference</h3>
+<ul>
+<li><strong>Projections:</strong>
+<ul>
+<li><code>.SelectCols("EmployeeID, FullName", "HourlyRate")</code> — quotes every column/qualified <code>alias.col</code> safely</li>
+<li><code>.SelectAliased("e.FullName", "EmployeeName")</code></li>
+<li><code>.SelectRaw("COUNT(*) AS TotalStaff")</code> <em>(only pass trusted SQL expressions, never user input)</em></li>
+<li><code>.DistinctRows()</code></li>
+</ul>
+</li>
+<li><strong>Joins:</strong>
+<ul>
+<li><code>.InnerJoinTable("Departments", "e.DepartmentID", "d.DepartmentID", "d")</code></li>
+<li><code>.LeftJoinTable("Departments", "e.DepartmentID", "d.DepartmentID", "d")</code></li>
+<li><code>.JoinRaw(...)</code></li>
+</ul>
+</li>
+<li><strong>Filtering (all values are bound via <code>?</code> parameters):</strong>
+<ul>
+<li><code>.WhereEq(col, val)</code> / <code>.WhereNotEq(col, val)</code> <em>(automatically emits <code>IS NULL</code> / <code>IS NOT NULL</code> when <code>val</code> is <code>Null</code> or <code>Empty</code>)</em></li>
+<li><code>.WhereOp(col, op, val)</code> — supports <code>=</code>, <code>&lt;&gt;</code>, <code>!=</code>, <code>&lt;</code>, <code>&lt;=</code>, <code>&gt;</code>, <code>&gt;=</code>, <code>LIKE</code>, <code>NOT LIKE</code>, <code>GLOB</code></li>
+<li><code>.WhereIn(col, arrayOrCollection)</code> / <code>.WhereNotIn(col, arrayOrCollection)</code> <em>(safely emits <code>1 = 0</code> / <code>1 = 1</code> when passed an empty collection)</em></li>
+<li><code>.WhereBetween(col, lowVal, highVal)</code></li>
+<li><code>.WhereLike(col, rawPattern)</code></li>
+<li><code>.WhereContains(col, userSearchText)</code> <em>(escapes <code>\</code>, <code>%</code>, and <code>_</code> with <code>ESCAPE '\'</code> so literal <code>%</code> or <code>_</code> characters in user search boxes never act as wildcards)</em></li>
+<li><code>.WhereNull(col)</code> / <code>.WhereNotNull(col)</code></li>
+<li><code>.WhereRaw("e.HourlyRate * 40 &gt; ?", 2000@)</code></li>
+<li><code>.WithTrashed()</code> / <code>.OnlyTrashed()</code> <em>(controls soft-delete filtering when <code>AddSoftDelete</code> is configured)</em></li>
+</ul>
+</li>
+<li><strong>Grouping, Ordering &amp; Pagination:</strong>
+<ul>
+<li><code>.GroupByCols("DepartmentID")</code> / <code>.HavingRaw("COUNT(*) &gt;= ?", 5)</code></li>
+<li><code>.OrderByCol("FullName")</code> / <code>.OrderByDesc("HourlyRate")</code></li>
+<li><code>.LimitRows(50)</code> / <code>.OffsetRows(100)</code> / <code>.Page(lngPageNumber, lngPageSize)</code> <em>(1-based page number)</em></li>
+</ul>
+</li>
+<li><strong>Terminal Execution Methods:</strong>
+<ul>
+<li><code>.ToRows()</code> / <code>.ToRowsRaw()</code> -&gt; <code>Collection</code> of <code>Scripting.Dictionary</code></li>
+<li><code>.FirstRow()</code> / <code>.FirstRowRaw()</code> -&gt; <code>Scripting.Dictionary</code> (or <code>Nothing</code>)</li>
+<li><code>.ToEntities(New clsMyEntity)</code> / <code>.FirstEntity(New clsMyEntity)</code> -&gt; strongly-typed <code>ISQLiteEntity</code> instances</li>
+<li><code>.CountRows()</code> -&gt; <code>Long</code></li>
+<li><code>.ExistsAny()</code> -&gt; <code>Boolean</code> (<code>SELECT EXISTS(... LIMIT 1)</code>)</li>
+<li><code>.PluckCol("BadgeCode")</code> -&gt; <code>Collection</code> of single-column scalar values</li>
+<li><code>.ScalarVal(Optional strSelectExpr)</code> -&gt; <code>Variant</code></li>
+<li><code>.UpdateValues(dictSetValues)</code> -&gt; <code>Long</code> (parameterized bulk <code>UPDATE</code> + auto <code>UpdatedAt</code>)</li>
+<li><code>.DeleteMatching(Optional blnForceHardDelete = False)</code> -&gt; <code>Long</code> (soft-deletes when configured unless <code>blnForceHardDelete:=True</code>)</li>
+<li><code>.ToSql()</code> / <code>.BoundParameters()</code> -&gt; inspect generated SQL and bound parameter list</li>
+</ul>
+</li>
+</ul>
+<hr>
+<h2 id="9-orm-repositories-typed-entities-eager-loading--unit-of-work">9. ORM Repositories, Typed Entities, Eager Loading &amp; Unit of Work</h2>
+<p><code>clsSQLiteRepository</code> (<code>Set repo = db.Repository("TableName")</code>) supports <strong>two working styles</strong> side by side:</p>
+<h3 id="mode-1--scriptingdictionary-payloads-zero-boilerplate">Mode 1 — <code>Scripting.Dictionary</code> Payloads (Zero Boilerplate)</h3>
+<ul>
+<li><code>FindById(varId, Optional blnIncludeTrashed = False) As Scripting.Dictionary</code></li>
+<li><code>FindByIdRaw(varId, Optional blnIncludeTrashed = False) As Scripting.Dictionary</code></li>
+<li><code>GetOrFail(varId) As Scripting.Dictionary</code> <em>(raises <code>sqErrNotFound</code> if missing)</em></li>
+<li><code>ExistsById(varId, Optional blnIncludeTrashed = False) As Boolean</code></li>
+<li><code>CountAll(Optional blnIncludeTrashed = False) As Long</code></li>
+<li><code>ListAll</code> / <code>ListAllRaw</code></li>
+<li><code>InsertRecord(dictValues, Optional blnEnforceClientEditable = False) As Variant</code></li>
+<li><code>InsertMany(colRecords As Collection) As Long</code> <em>(transactional batch insert)</em></li>
+<li><code>UpdateRecord(varId, dictValues, Optional blnDirtyOnly = False, Optional blnEnforceClientEditable = False) As Long</code>
+<ul>
+<li>When <code>blnDirtyOnly:=True</code>, fetches the stored row, diffs coerced values via <code>DiffChangedColumns</code>, and <strong>skips the <code>UPDATE</code> completely</strong> if nothing changed.</li>
+<li>When <code>blnEnforceClientEditable:=True</code> (useful for web/JSON form payloads), rejects writes to server-managed columns (<code>IsClientEditable = False</code>, such as PKs and audit stamps).</li>
+</ul>
+</li>
+<li><code>UpsertRecord("UniqueCol1, UniqueCol2", dictValues) As Variant</code> <em>(emits <code>INSERT ... ON CONFLICT (...) DO UPDATE SET ...</code>, preserving <code>CreatedAt</code>)</em></li>
+<li><code>DeleteRecord(varId, Optional blnForceHardDelete = False) As Long</code></li>
+<li><code>RestoreRecord(varId) As Long</code> <em>(clears <code>DeletedAt</code> back to <code>NULL</code>)</em></li>
+</ul>
+<h3 id="mode-2--strongly-typed-vba-classes-implements-isqliteentity">Mode 2 — Strongly-Typed VBA Classes (<code>Implements ISQLiteEntity</code>)</h3>
+<p>Because VBA lacks runtime reflection (<code>Activator.CreateInstance</code>) for private class modules, <code>ISQLiteEntity</code> uses the lightweight <strong>Prototype Factory pattern</strong> (<code>CreateBlank</code>):</p>
+<pre><code class="language-vba">' Class Module: clsDemoTask (see AccessSQLite.accdb for the complete working class)
+Option Compare Database
+Option Explicit
+
+Implements ISQLiteEntity
+
+Public TaskID As Long
+Public ProjectID As Long
+Public TitleText As String
+Public EstimateCost As Currency
+Public IsCompleted As Boolean
+
+Private Property Get ISQLiteEntity_EntityTableName() As String
+    ISQLiteEntity_EntityTableName = "DemoTasks"
+End Property
+
+Private Function ISQLiteEntity_CreateBlank() As ISQLiteEntity
+    Set ISQLiteEntity_CreateBlank = New clsDemoTask
+End Function
+
+Private Sub ISQLiteEntity_ReadFromRow(ByVal dictRow As Scripting.Dictionary)
+    TaskID = CLng(Nz(dictRow("TaskID"), 0))
+    ProjectID = CLng(Nz(dictRow("ProjectID"), 0))
+    TitleText = CStr(Nz(dictRow("TitleText"), vbNullString))
+    EstimateCost = CCur(Nz(dictRow("EstimateCost"), 0@))
+    IsCompleted = CBool(Nz(dictRow("IsCompleted"), False))
+End Sub
+
+Private Sub ISQLiteEntity_WriteToRow(ByVal dictRow As Scripting.Dictionary)
+    dictRow("TaskID") = TaskID
+    dictRow("ProjectID") = ProjectID
+    dictRow("TitleText") = TitleText
+    dictRow("EstimateCost") = EstimateCost
+    dictRow("IsCompleted") = IsCompleted
+End Sub
+</code></pre>
+<p>Using typed entities with <code>clsSQLiteRepository</code>:</p>
+<pre><code class="language-vba">Dim task As New clsDemoTask
+task.ProjectID = 1
+task.TitleText = "Implement Invoice Export"
+task.EstimateCost = 600@
+
+' Inserts new entity (TaskID = 0) and hydrates generated TaskID + CreatedAt back onto `task`
+repoTasks.SaveEntity task
+
+' Later mutation: diffs against stored row and updates ONLY changed columns + UpdatedAt
+task.IsCompleted = True
+repoTasks.SaveEntity task, blnDirtyOnly:=True
+
+' Hydrate a single entity or a filtered Collection of clsDemoTask instances
+Dim loaded As clsDemoTask
+Set loaded = repoTasks.FindEntity(task.TaskID, New clsDemoTask)
+
+Dim openTasks As Collection
+Set openTasks = repoTasks.NewQuery().WhereEq("IsCompleted", False).ToEntities(New clsDemoTask)
+</code></pre>
+<h3 id="batch-eager-relationship-loading-zero-n1-queries">Batch Eager Relationship Loading (Zero <code>N+1</code> Queries)</h3>
+<p>Instead of running a query inside a <code>For Each</code> loop over parent rows, <code>IncludeHasMany</code> and <code>IncludeBelongsTo</code> collect distinct foreign keys, chunk <code>WHERE ... IN (...)</code> queries in batches of <code>900</code> parameters (well within SQLite's parameter limit), and attach related rows in memory in <strong>2 total SQL queries</strong>:</p>
+<pre><code class="language-vba">Dim colProjects As Collection
+Dim proj As Scripting.Dictionary
+Dim taskRow As Scripting.Dictionary
+
+Set colProjects = db.Repository("Projects").ListAllRaw("ProjectName")
+
+' Attaches a Collection of child task Dictionaries at proj("Tasks") in 1 batched SELECT
+db.Repository("Projects").IncludeHasMany _
+    colParentRows:=colProjects, _
+    strChildTable:="DemoTasks", _
+    strForeignKeyCol:="ProjectID", _
+    strAttachAs:="Tasks", _
+    strLocalKeyCol:="ProjectID", _
+    strOrderByChildCol:="PriorityRank"
+
+For Each proj In colProjects
+    Debug.Print proj("ProjectTitle") &amp; " (" &amp; proj("Tasks").Count &amp; " tasks)"
+    For Each taskRow In proj("Tasks")
+        Debug.Print "  - " &amp; taskRow("TitleText")
+    Next taskRow
+Next proj
+</code></pre>
+<p>Similarly, <code>IncludeBelongsTo</code> attaches each child row's parent <code>Scripting.Dictionary</code> (e.g., <code>taskRow("Project")</code>):</p>
+<pre><code class="language-vba">db.Repository("DemoTasks").IncludeBelongsTo colTasks, "Projects", "ProjectID", "Project"
+</code></pre>
+<h3 id="atomic-multi-repository-batches-clssqliteunitofwork">Atomic Multi-Repository Batches (<code>clsSQLiteUnitOfWork</code>)</h3>
+<p><code>clsSQLiteUnitOfWork</code> queues inserts, updates, deletes, entity saves, and custom SQL statements across multiple tables and commits them inside a single transaction/savepoint — rolling back every change automatically if any validation rule or constraint fails:</p>
+<pre><code class="language-vba">Dim uow As AccessSQLite.clsSQLiteUnitOfWork
+Set uow = db.NewUnitOfWork()
+
+uow.RegisterInsert "Projects", dictNewProject
+uow.RegisterEntitySave objFirstTask
+uow.RegisterUpdate "Counters", 1, dictCounterUpdate
+uow.RegisterDelete "StagingImports", 99, blnForceHardDelete:=True
+
+uow.CommitWork ' Atomic: all 4 succeed or all 4 roll back
+</code></pre>
+<hr>
+<h2 id="10-entity-class-generator-modsqliteentitygen">10. Entity Class Generator (<code>modSQLiteEntityGen</code>)</h2>
+<p>You can auto-generate complete, ready-to-save VBA class module code (<code>Implements ISQLiteEntity</code>) from any mapped or existing SQLite table. Columns named after Access/VBA/SQL reserved words (such as <code>Date</code>, <code>Value</code>, <code>Name</code>, <code>Select</code>, <code>Count</code>, <code>Order</code>, <code>Index</code>, <code>Type</code>) are automatically suffixed with <code>Value</code> (<code>DateValue</code>, <code>SelectValue</code>) in VBA identifiers while preserving exact column names in <code>ReadFromRow</code> / <code>WriteToRow</code>:</p>
+<pre><code class="language-vba">Dim db As AccessSQLite.clsSQLiteConnection
+Set db = AccessSQLite.OpenSQLite(CurrentProject.Path &amp; "\AppData.db")
+Debug.Print AccessSQLite.GenerateEntityClassCode(db, "Orders", "clsOrder")
+db.CloseConnection
+</code></pre>
+<hr>
+<h2 id="11-versioned-schema-migrations-clssqlitemigrator">11. Versioned Schema Migrations (<code>clsSQLiteMigrator</code>)</h2>
+<p><code>clsSQLiteMigrator</code> tracks schema evolution in <code>_schema_migrations</code> (<code>VersionNum</code>, <code>MigrationTitle</code>, <code>ChecksumHex</code>, <code>AppliedAtIso</code>, <code>DurationMs</code>). Before applying new migrations, <code>VerifyChecksums</code> computes a deterministic 32-bit FNV-1a hash of each registered <code>UpSql</code> script and raises <code>sqErrMigration</code> if an already-applied migration script was altered after deployment.</p>
+<pre><code class="language-vba">Dim mig As AccessSQLite.clsSQLiteMigrator
+Set mig = db.NewMigrator()
+
+mig.AddMigration 1, "Create Categories", _
+    "CREATE TABLE Categories (CategoryID INTEGER PRIMARY KEY, CategoryName TEXT NOT NULL UNIQUE);", _
+    "DROP TABLE Categories;"
+
+mig.AddMigration 2, "Create Items", _
+    "CREATE TABLE Items (" &amp; _
+    "  ItemID INTEGER PRIMARY KEY AUTOINCREMENT," &amp; _
+    "  CategoryID INTEGER NOT NULL REFERENCES Categories(CategoryID)," &amp; _
+    "  SKU TEXT NOT NULL UNIQUE," &amp; _
+    "  UnitCost CURRENCY NOT NULL DEFAULT 0" &amp; _
+    ");", _
+    "DROP TABLE Items;"
+
+mig.MigrateUp                  ' Applies pending migrations in ascending order (each in a savepoint)
+Debug.Print mig.CurrentVersion ' -&gt; 2
+
+' Optional rollback during development/testing:
+' mig.RollbackLast 1           ' Runs v2 DownSql and removes v2 from _schema_migrations
+</code></pre>
+<hr>
+<h2 id="12-access-dao---sqlite-bridge-clssqliteaccessbridge">12. Access DAO &lt;-&gt; SQLite Bridge (<code>clsSQLiteAccessBridge</code>)</h2>
+<p><code>clsSQLiteAccessBridge</code> moves tables and queries between Access (<code>DAO.Database</code>) and SQLite at prepared-statement transaction speeds while fixing common pitfalls in legacy ports:</p>
+<ul>
+<li><strong>No <code>Null</code>-binding bleed:</strong> Resets and clears statement bindings before every row so <code>Null</code> columns never inherit the previous row's bound value.</li>
+<li><strong><code>&gt; 255</code>-character Memo preservation:</strong> Inspects incoming string lengths and <code>DECLTYPE</code> metadata, automatically creating <code>dbMemo</code> instead of truncating at <code>dbText(255)</code>.</li>
+<li><strong><code>0</code>-row schema fidelity:</strong> <code>ImportSQLiteToAccess</code> / <code>ImportQueryToAccess</code> creates the destination Access <code>DAO.TableDef</code> from SQLite column metadata even when <code>0</code> rows match the <code>SELECT</code> filter.</li>
+</ul>
+<pre><code class="language-vba">Dim bridge As AccessSQLite.clsSQLiteAccessBridge
+Set bridge = db.NewAccessBridge() ' Defaults to CurrentDb; or pass an open back-end DAO.Database
+
+' 1. Export an Access table or SELECT query into SQLite
+Dim exportedCount As Long
+exportedCount = bridge.ExportAccessToSQLite("tblOrders", "OrdersArchive", blnOverwriteTable:=True)
+
+' 2. Import an entire SQLite table into a local Access table
+Dim importedCount As Long
+importedCount = bridge.ImportSQLiteToAccess("OrdersArchive", "tblOrdersLocal", blnOverwriteTable:=True)
+
+' 3. Import a parameterized SQLite SELECT query into Access
+importedCount = bridge.ImportQueryToAccess( _
+    "SELECT * FROM OrdersArchive WHERE OrderTotal &gt;= ? AND RegionCode = ?;", _
+    "tblHighValueOrders", True, 5000@, "MIDWEST")
+</code></pre>
+<hr>
+<h2 id="13-data-type-marshaling--edge-case-guarantees">13. Data Type Marshaling &amp; Edge-Case Guarantees</h2>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Legacy VBA Wrapper Behavior</th>
+<th><code>AccessSQLite</code> Guarantee</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Empty String <code>""</code> vs <code>Null</code></strong></td>
+<td><code>StrPtr("")</code> can be <code>0</code>, causing <code>sqlite3_bind_text16</code> to bind SQL <code>NULL</code> and fail <code>NOT NULL</code> constraints</td>
+<td>Binds a valid 2-byte zero pointer with <code>0</code> byte length for <code>""</code> (<code>''</code> in SQL) and calls <code>sqlite3_bind_null</code> only for <code>Null</code> / <code>Empty</code> / <code>Nothing</code>.</td>
+</tr>
+<tr>
+<td><strong>64-bit Integers (<code>&gt; 2,147,483,647</code>)</strong></td>
+<td>Overflowed 32-bit <code>Long</code> or truncated to 16-bit <code>Integer</code></td>
+<td>Uses <code>LongLong</code> on 64-bit VBA and scaled <code>Currency</code> (<code>* 10000@</code> / <code>/ 10000@</code>) on 32-bit VBA, preserving exact integers up to <code>±922,337,203,685,477</code>.</td>
+</tr>
+<tr>
+<td><strong><code>0</code>-Byte BLOBs (<code>X''</code>)</strong></td>
+<td>Crashed with <code>Subscript out of range</code> on <code>ReDim buf(length - 1)</code></td>
+<td>Binds via <code>sqlite3_bind_zeroblob(..., 0)</code> and returns an unallocated 0-length <code>Byte()</code> (<code>GetByteArrayLength(b) = 0</code>) cleanly.</td>
+</tr>
+<tr>
+<td><strong>Unicode Paths &amp; Text</strong></td>
+<td>ANSI <code>String</code> Declares corrupted non-ACP characters (<code>äöü</code>, CJK, symbols)</td>
+<td>Uses UTF-16 <code>StrPtr</code> + <code>sqlite3_column_bytes16</code> + <code>RtlMoveMemory</code> end to end (zero off-by-one truncation).</td>
+</tr>
+<tr>
+<td><strong>DLL Unload &amp; <code>LastDllError</code></strong></td>
+<td><code>Debug.Print Err.LastDllError</code> wiped Win32 error to <code>0</code> (<code>Err.Raise 0</code> -&gt; Error 5); <code>FreeLibrary</code> left stale handles</td>
+<td>Captures <code>Err.LastDllError</code> immediately into a local <code>Long</code>, formats via <code>FormatMessageW</code>, frees <code>SQLite3_StdCall.dll</code> before <code>sqlite3.dll</code>, and zeroes all module handles.</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="14-error-handling--diagnostics">14. Error Handling &amp; Diagnostics</h2>
+<p>All library errors raise structured <code>SQLiteErrorNumber</code> codes (<code>Err.Source = "AccessSQLite.&lt;Class&gt;.&lt;Method&gt;"</code>), including SQLite primary and extended result codes (<code>[sqlite_rc=19, ext_rc=2067]</code>):</p>
+<table>
+<thead>
+<tr>
+<th>Enum Member</th>
+<th>Numeric Offset</th>
+<th>Raised When</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sqErrInitFailed</code></td>
+<td><code>vbObjectError + 2101</code></td>
+<td>Driver DLL fails to load or <code>OpenConnection</code> cannot open the database file</td>
+</tr>
+<tr>
+<td><code>sqErrConnectionClosed</code></td>
+<td><code>vbObjectError + 2102</code></td>
+<td>An operation is invoked on a closed <code>clsSQLiteConnection</code> or finalized <code>clsSQLiteStatement</code></td>
+</tr>
+<tr>
+<td><code>sqErrSqlFailed</code></td>
+<td><code>vbObjectError + 2103</code></td>
+<td>SQL syntax error, busy/locked timeout, I/O error, or invalid transaction state</td>
+</tr>
+<tr>
+<td><code>sqErrConstraint</code></td>
+<td><code>vbObjectError + 2104</code></td>
+<td><code>UNIQUE</code>, <code>NOT NULL</code>, <code>FOREIGN KEY</code>, or <code>CHECK</code> / <code>STRICT</code> constraint violation</td>
+</tr>
+<tr>
+<td><code>sqErrValidation</code></td>
+<td><code>vbObjectError + 2105</code></td>
+<td><code>clsSQLiteTableMap</code> validation failure (unknown column, non-editable field, max length, bad type, missing required field)</td>
+</tr>
+<tr>
+<td><code>sqErrNotFound</code></td>
+<td><code>vbObjectError + 2106</code></td>
+<td><code>GetOrFail</code>, dirty <code>UpdateRecord</code>, or <code>ReflectTableMap</code> targets a non-existent record/table</td>
+</tr>
+<tr>
+<td><code>sqErrMigration</code></td>
+<td><code>vbObjectError + 2107</code></td>
+<td>Duplicate migration version, altered migration checksum, or failed up/down SQL script</td>
+</tr>
+<tr>
+<td><code>sqErrInvalidArgument</code></td>
+<td><code>vbObjectError + 2108</code></td>
+<td>Empty identifier, invalid operator, missing named parameter, or <code>Nothing</code> object argument</td>
+</tr>
+<tr>
+<td><code>sqErrBridge</code></td>
+<td><code>vbObjectError + 2109</code></td>
+<td>Access DAO &lt;-&gt; SQLite export/import error</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="15-developer-internals-testing--contribution-notes">15. Developer Internals, Testing &amp; Contribution Notes</h2>
+<h3 id="running-the-automated-test-suite">Running the Automated Test Suite</h3>
+<p>Open <code>AccessSQLite.accdb</code> and run in the VBA Immediate Window (<strong>Ctrl+G</strong>):</p>
+<pre><code class="language-vba">? RunAllSQLiteTests()
+</code></pre>
+<p>Or run via Access SQL:</p>
+<pre><code class="language-sql"><span class="hljs-keyword">SELECT</span> RunAllSQLiteTests() <span class="hljs-keyword">AS</span> TestSuiteResult <span class="hljs-keyword">FROM</span> tblDual;
+</code></pre>
+<p>Expected output:</p>
+<pre><code class="language-text">PASS | Assertions=78 | Failed=0 | Elapsed=... ms
+</code></pre>
+<p><code>modSQLiteTests</code> verifies:</p>
+<ol>
+<li>Both <code>clsSQLiteWinDriver</code> (<code>winsqlite3.dll</code>) and <code>clsSQLiteBundledDriver</code> (<code>sqlite3.dll</code> + <code>SQLite3_StdCall.dll</code>)</li>
+<li>Automatic SMB <code>DELETE</code> journal mode and <code>PRAGMA foreign_keys = ON</code> on <code>./AccessSQLite_Test.db</code></li>
+<li>Empty string <code>""</code> vs <code>Null</code>, Unicode UTF-16 strings, <code>12 KB</code> Memo strings, 64-bit integers (<code>5,000,000,007</code>), 4-decimal <code>Currency</code>, <code>Boolean</code>, <code>DateTime</code>, <code>0</code>-byte and binary <code>Byte()</code> BLOBs, and <code>@literal</code> positional disambiguation</li>
+<li>Outer transactions and nested <code>SAVEPOINT</code> partial rollbacks</li>
+<li><code>STRICT</code> tables, <code>SyncAdditiveColumns</code>, <code>WhereContains</code> wildcard escaping, <code>WhereIn</code>, <code>WhereBetween</code>, <code>Page</code>, and <code>PluckCol</code></li>
+<li><code>UpsertRecord</code>, <code>sqErrValidation</code>, <code>clsDemoTask</code> entity CRUD, skipped no-op dirty updates, soft deletes + <code>OnlyTrashed</code> + <code>RestoreRecord</code>, 2-query eager <code>IncludeHasMany</code>, <code>clsSQLiteUnitOfWork</code> rollback/commit, and reserved-word sanitization in <code>modSQLiteEntityGen</code></li>
+<li>Multi-step <code>clsSQLiteMigrator</code> up/down rollbacks, <code>clsSQLiteAccessBridge</code> DAO &lt;-&gt; SQLite round-trips (including <code>Null</code> binding reset, <code>400</code>-char Memo fields, and <code>0</code>-row table creation), and online <code>BackupToFile</code></li>
+</ol>
+<h3 id="coding--naming-conventions">Coding &amp; Naming Conventions</h3>
+<p>When extending <code>AccessSQLite</code>:</p>
+<ul>
+<li>Keep <code>Option Compare Database</code> and <code>Option Explicit</code> at the top of every module and class.</li>
+<li>Avoid Access, VBA, DAO, and ACE/Jet reserved words (<code>Date</code>, <code>Time</code>, <code>Name</code>, <code>Value</code>, <code>Text</code>, <code>Count</code>, <code>Index</code>, <code>Select</code>, <code>Order</code>, <code>Group</code>, <code>Table</code>, <code>Field</code>, <code>Section</code>, <code>Form</code>, <code>Report</code>) as variable, property, parameter, or procedure names.</li>
+<li>Keep <code>Attribute VB_Exposed = True</code> on all public classes and add factory functions to <code>modSQLiteFactory</code> for any new creatable public class.</li>
+<li>Preserve the VBA project name <code>AccessSQLite</code> (<code>EnsureLibraryProjectName "AccessSQLite"</code>) before compiling and distributing updates.</li>
+</ul>
+</body></html>

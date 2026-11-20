@@ -1,0 +1,12 @@
+# Access lock & temporary files
+*.laccdb
+*.ldb
+~*
+
+# SQLite transient journal / WAL / shared-memory files
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm

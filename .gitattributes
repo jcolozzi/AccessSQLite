@@ -1,0 +1,8 @@
+*.accdb binary
+*.mdb binary
+*.db binary
+*.sqlite binary
+*.dll binary
+*.zip binary
+*.md text eol=crlf
+*.html text eol=crlf

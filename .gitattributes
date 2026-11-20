@@ -4,5 +4,7 @@
 *.sqlite binary
 *.dll binary
 *.zip binary
+*.bas text eol=crlf
+*.cls text eol=crlf
+*.frm text eol=crlf
 *.md text eol=crlf
-*.html text eol=crlf

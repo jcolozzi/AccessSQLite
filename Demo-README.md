@@ -33,7 +33,8 @@ For full API reference documentation on the underlying class library and ORM, se
 | File | Role |
 |---|---|
 | [`./AccessSQLiteDemo.accdb`](./AccessSQLiteDemo.accdb) | **Front-end UI application** (VBA Project: `AccessSQLiteDemo`). Contains `frmTaskList`, `frmTaskDetail`, `clsTaskItem`, `modDemoDataService`, `modDemoTests`, and the local UI staging table `tblTaskBuffer`. |
-| [`./AccessSQLite.accdb`](./AccessSQLite.accdb) | **Reusable VBA Class Library & ORM** (VBA Project: `AccessSQLite`). Contains all SQLite C-API drivers, `clsSQLiteConnection`, `clsSQLiteQueryBuilder`, `clsSQLiteTableMap`, `clsSQLiteRepository`, `ISQLiteEntity`, `clsSQLiteMigrator`, and `modSQLiteFactory`. |
+| [`./src/AccessSQLiteDemo/`](./src/AccessSQLiteDemo) | **Exported Demo VBA source** (`modDemoDataService.bas`, `modDemoTests.bas`, `clsTaskItem.cls`, `Form_frmTaskList.cls`, `Form_frmTaskDetail.cls`). |
+| [`./AccessSQLite.accdb`](./AccessSQLite.accdb) | **Reusable VBA Class Library & ORM** (VBA Project: `AccessSQLite`). Contains all SQLite C-API drivers, `clsSQLiteConnection`, `clsSQLiteQueryBuilder`, `clsSQLiteTableMap`, `clsSQLiteRepository`, `ISQLiteEntity`, `clsSQLiteMigrator`, and `modSQLiteFactory` (source exported in [`./src/AccessSQLite/`](./src/AccessSQLite)). |
 | [`./AccessSQLiteDemo.db`](./AccessSQLiteDemo.db) | **Single source of truth for application data.** Standard SQLite 3 database holding the `Tasks` table and `_schema_migrations` history. |
 | `winsqlite3.dll` *(Windows System)* / [`./lib/sqlite3.dll`](./lib/sqlite3.dll) | **Native SQLite C engine.** By default, `AccessSQLite` uses Windows' built-in `winsqlite3.dll` (zero external DLL deployment) and falls back automatically to the bundled `lib\sqlite3.dll` + `lib\SQLite3_StdCall.dll` (x86) or `lib\x64\sqlite3.dll` (x64). |
 

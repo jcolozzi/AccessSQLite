@@ -10,3 +10,7 @@
 *.sqlite-journal
 *.sqlite-wal
 *.sqlite-shm
+
+# Local HTML Markdown previews & per-machine IDE settings
+*README.html
+*.xlide_settings.json

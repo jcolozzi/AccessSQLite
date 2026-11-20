@@ -30,6 +30,8 @@
 | File / Folder | Purpose |
 |---|---|
 | [`./AccessSQLite.accdb`](./AccessSQLite.accdb) | Host Access class-library database (VBA Project Name: `AccessSQLite`; public classes set `Attribute VB_Exposed = True`) |
+| [`./src/AccessSQLite/`](./src/AccessSQLite) | Exported VBA source modules (`.bas` and `.cls`) from `AccessSQLite.accdb` |
+| [`./src/AccessSQLiteDemo/`](./src/AccessSQLiteDemo) | Exported VBA source & form code-behind modules (`.bas` and `.cls`) from `AccessSQLiteDemo.accdb` |
 | [`./lib/sqlite3.dll`](./lib/sqlite3.dll) | Bundled **32-bit (`x86`)** SQLite `3.45.3` engine used by `clsSQLiteBundledDriver` under 32-bit Microsoft Access |
 | [`./lib/SQLite3_StdCall.dll`](./lib/SQLite3_StdCall.dll) | Bundled **32-bit (`x86`)** `__stdcall` thunk wrapper used alongside 32-bit `lib\sqlite3.dll` |
 | [`./lib/x64/sqlite3.dll`](./lib/x64/sqlite3.dll) | Bundled **64-bit (`x64`)** SQLite engine isolated in `lib\x64\` for 64-bit Microsoft Access |

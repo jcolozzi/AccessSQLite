@@ -21,6 +21,7 @@
 13. [Data Type Marshaling & Edge-Case Guarantees](#13-data-type-marshaling--edge-case-guarantees)
 14. [Error Handling & Diagnostics](#14-error-handling--diagnostics)
 15. [Developer Internals, Testing & Contribution Notes](#15-developer-internals-testing--contribution-notes)
+16. [Credits, Acknowledgments & Third-Party Licenses](#16-credits-acknowledgments--third-party-licenses)
 
 ---
 
@@ -666,3 +667,47 @@ When extending `AccessSQLite`:
 - Avoid Access, VBA, DAO, and ACE/Jet reserved words (`Date`, `Time`, `Name`, `Value`, `Text`, `Count`, `Index`, `Select`, `Order`, `Group`, `Table`, `Field`, `Section`, `Form`, `Report`) as variable, property, parameter, or procedure names.
 - Keep `Attribute VB_Exposed = True` on all public classes and add factory functions to `modSQLiteFactory` for any new creatable public class.
 - Preserve the VBA project name `AccessSQLite` (`EnsureLibraryProjectName "AccessSQLite"`) before compiling and distributing updates.
+
+---
+
+## 16. Credits, Acknowledgments & Third-Party Licenses
+
+`AccessSQLite` builds upon foundational ideas, C/VBA interop techniques, and components from the SQLite and Office/VBA open-source community:
+
+- **[SQLite](https://www.sqlite.org/) — D. Richard Hipp & the SQLite Consortium** *(Public Domain)*
+  - The embedded SQL database engine powering both Windows' built-in `winsqlite3.dll` and the bundled `lib/sqlite3.dll` (`x86`) / `lib/x64/sqlite3.dll` (`x64`) binaries.
+- **[`govert/SQLiteForExcel`](https://github.com/govert/SQLiteForExcel) — Govert van Drimmelen** *(MIT License)*
+  - Author of the `SQLite3_StdCall.dll` 32-bit `__stdcall` C wrapper (`lib/SQLite3_StdCall.dll`) and the original VBA UTF-16 `StrPtr`, Win32 `MultiByteToWideChar` / `WideCharToMultiByte`, Julian-day date conversion, and online backup (`sqlite3_backup_*`) patterns adapted in `clsSQLiteBundledDriver` and `modSQLiteTypes`.
+- **[`ReneNyffenegger/winsqlite3.dll-4-VBA`](https://github.com/ReneNyffenegger/winsqlite3.dll-4-VBA) — René Nyffenegger**
+  - Demonstrated calling Windows 10/11's system `winsqlite3.dll` directly from VBA without external wrapper DLLs, inspiring `clsSQLiteWinDriver`'s zero-deployment 32-bit/64-bit `PtrSafe` driver architecture.
+- ***SQLite for Access (`Beispiel.accdb`)* — Thomas Gewinnus** *(linked via [`govert/SQLiteForExcel`](https://github.com/govert/SQLiteForExcel))*
+  - Ported the `SQLiteForExcel` interface to Microsoft Access VBA with an initial DAO-style `SQLiteDatabase` class and Access <-> SQLite import/export routines, inspiring `clsSQLiteAccessBridge`.
+- **[`b-gonzalez/SQLiteForExcel`](https://github.com/b-gonzalez/SQLiteForExcel) — Brian Gonzalez** *(MIT License)*
+  - Refactored `SQLiteForExcel` into class/interface modules (`ISqlite3` / `cSqlite3`) using unified `LongPtr` signatures across 32-bit and 64-bit VBA7, informing `ISQLiteDriver`.
+
+### Third-Party License Notice (`SQLiteForExcel` / `SQLite3_StdCall.dll`)
+
+```text
+The MIT License (MIT)
+
+Copyright (c) Govert van Drimmelen
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+

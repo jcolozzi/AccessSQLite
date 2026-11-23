@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AccessSQLite Studio</title>
+    <link rel="stylesheet" href="studio.css">
+</head>
+<body>
+    <div id="ss-app" class="ss-shell">
+        <div class="ss-empty">Loading AccessSQLite Studio &amp; Monaco Editor...</div>
+    </div>
+
+    <!-- Save Stored Query Modal -->
+    <div id="ss-save-modal" class="ss-modal-backdrop" hidden>
+        <div class="ss-modal" role="dialog" aria-modal="true" aria-labelledby="ss-modal-title">
+            <h3 id="ss-modal-title">Save Stored Query</h3>
+            <div class="ss-field">
+                <label for="ss-q-name">Query Name *</label>
+                <input id="ss-q-name" class="ss-input" type="text" placeholder="e.g. Monthly Category Summary">
+            </div>
+            <div class="ss-field">
+                <label for="ss-q-cat">Folder / Category</label>
+                <input id="ss-q-cat" class="ss-input" type="text" value="General" placeholder="General, Analytics, Maintenance...">
+            </div>
+            <div class="ss-field">
+                <label for="ss-q-desc">Description</label>
+                <input id="ss-q-desc" class="ss-input" type="text" placeholder="Optional note shown in Stored Queries tooltip">
+            </div>
+            <div class="ss-modal-actions">
+                <button id="ss-q-cancel" type="button" class="ss-btn">Cancel</button>
+                <button id="ss-q-confirm" type="button" class="ss-btn ss-btn-primary">Save Query</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load bridge first so VBA polling connects immediately; Monaco AMD loader comes before studio.js -->
+    <script src="bridge.js"></script>
+    <script src="../vendor/monaco/vs/loader.js"></script>
+    <script src="studio.js"></script>
+</body>
+</html>

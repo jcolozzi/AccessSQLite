@@ -9,20 +9,29 @@ Public Function RunDemoFormsVerification() As String
     Dim strSavedTitle As String
     Dim curSavedCost As Currency
     Dim lngFilteredCnt As Long
+    Dim lngAdoFilteredCnt As Long
+    Dim objAdoRs As Object
+    Dim colSelIds As Collection
 
     On Error GoTo TestErr
 
-    strStep = "1-OpenTaskList"
+    strStep = "0-InstallDemoRibbon"
+    InstallDemoRibbon
+    If CurrentDb.Properties("CustomRibbonID").Value <> "AccessSQLiteDemo" Then
+        Err.Raise vbObjectError + 3000, "modDemoTests", "CustomRibbonID was not set to AccessSQLiteDemo."
+    End If
+
+    strStep = "1-OpenDaoTaskList"
     DoCmd.OpenForm "frmTaskList", acNormal
 
-    strStep = "1b-CountCheck"
+    strStep = "1b-DaoCountCheck"
     lngInitialSqliteCnt = TasksRepo().CountAll(False)
     Forms("frmTaskList").RecordsetClone.MoveLast
     If Forms("frmTaskList").RecordsetClone.RecordCount <> lngInitialSqliteCnt Then
-        Err.Raise vbObjectError + 3001, "modDemoTests", "Initial Continuous Form row count mismatch."
+        Err.Raise vbObjectError + 3001, "modDemoTests", "Initial DAO Continuous Form row count mismatch."
     End If
 
-    strStep = "2-FilterCategory"
+    strStep = "2-DaoFilterCategory"
     Dim lngExpectedEng As Long
     lngExpectedEng = TasksRepo().NewQuery().WhereEq("CategoryName", "Engineering").CountRows()
     Forms("frmTaskList")!cboFilterCategory.Value = "Engineering"
@@ -30,25 +39,44 @@ Public Function RunDemoFormsVerification() As String
     If lngExpectedEng > 0 Then Forms("frmTaskList").RecordsetClone.MoveLast
     lngFilteredCnt = Forms("frmTaskList").RecordsetClone.RecordCount
     If lngFilteredCnt <> lngExpectedEng Then
-        Err.Raise vbObjectError + 3002, "modDemoTests", "Expected " & lngExpectedEng & " Engineering tasks, got " & lngFilteredCnt
+        Err.Raise vbObjectError + 3002, "modDemoTests", "Expected " & lngExpectedEng & " DAO Engineering tasks, got " & lngFilteredCnt
     End If
 
-    strStep = "2b-EmptySearchCheck"
+    strStep = "2b-DaoEmptySearchCheck"
     Forms("frmTaskList")!txtSearch.Value = "zzzz_no_match_check"
     Forms("frmTaskList").RefreshFromSQLite 0
     If Forms("frmTaskList").RecordsetClone.RecordCount <> 0 Then
-        Err.Raise vbObjectError + 3006, "modDemoTests", "Expected 0 rows for non-matching search, got " & Forms("frmTaskList").RecordsetClone.RecordCount
+        Err.Raise vbObjectError + 3006, "modDemoTests", "Expected 0 DAO rows for non-matching search."
     End If
 
-    strStep = "2c-ResetFilterFromEmpty"
+    strStep = "2c-DaoResetFilter"
     Forms("frmTaskList")!txtSearch.Value = vbNullString
     Forms("frmTaskList")!cboFilterCategory.Value = "(All)"
     Forms("frmTaskList").RefreshFromSQLite 0
 
-    strStep = "3-OpenTaskDetailNew"
+    strStep = "3-OpenAdoTaskList"
+    DoCmd.OpenForm "frmTaskListAdo", acNormal
+    If Len(Forms("frmTaskListAdo").RecordSource) <> 0 Then
+        Err.Raise vbObjectError + 3007, "modDemoTests", "frmTaskListAdo RecordSource must be empty (pure in-memory ADO)."
+    End If
+    If Forms("frmTaskListAdo").Recordset.RecordCount <> lngInitialSqliteCnt Then
+        Err.Raise vbObjectError + 3008, "modDemoTests", "frmTaskListAdo initial ADO RecordCount mismatch."
+    End If
+
+    strStep = "3b-AdoFilterCheck"
+    Forms("frmTaskListAdo")!cboFilterCategory.Value = "Engineering"
+    Forms("frmTaskListAdo").RefreshFromSQLite 0
+    lngAdoFilteredCnt = Forms("frmTaskListAdo").Recordset.RecordCount
+    If lngAdoFilteredCnt <> lngExpectedEng Then
+        Err.Raise vbObjectError + 3009, "modDemoTests", "Expected " & lngExpectedEng & " ADO Engineering tasks, got " & lngAdoFilteredCnt
+    End If
+    Forms("frmTaskListAdo")!cboFilterCategory.Value = "(All)"
+    Forms("frmTaskListAdo").RefreshFromSQLite 0
+
+    strStep = "4-OpenTaskDetailNew"
     DoCmd.OpenForm "frmTaskDetail", acNormal, , , , , "NEW"
 
-    strStep = "3b-PopulateDetailFields"
+    strStep = "4b-PopulateDetailFields"
     Forms("frmTaskDetail")!txtTaskTitle.Value = "E2E Verified SQLite Form Task"
     Forms("frmTaskDetail")!cboCategoryName.Value = "Analytics"
     Forms("frmTaskDetail")!cboPriorityLevel.Value = "High"
@@ -56,37 +84,73 @@ Public Function RunDemoFormsVerification() As String
     Forms("frmTaskDetail")!txtDueDate.Value = DateSerial(2026, 12, 31)
     Forms("frmTaskDetail")!txtTaskNotes.Value = "Created via frmTaskDetail unbound ORM single-page form."
 
-    strStep = "3c-SaveDetailToSQLite"
+    strStep = "4c-SaveDetailToSQLite"
     lngNewId = Forms("frmTaskDetail").SaveCurrentTaskToSQLite(True)
     If lngNewId <= 0 Then
         Err.Raise vbObjectError + 3003, "modDemoTests", "frmTaskDetail failed to return new SQLite TaskID."
     End If
 
-    strStep = "3d-VerifyListAutoSynced"
+    strStep = "4d-VerifyBothContinuousFormsAutoSynced"
     Forms("frmTaskList").RecordsetClone.MoveLast
     If Forms("frmTaskList").RecordsetClone.RecordCount <> (lngInitialSqliteCnt + 1) Then
-        Err.Raise vbObjectError + 3004, "modDemoTests", "frmTaskList did not auto-sync after frmTaskDetail save."
+        Err.Raise vbObjectError + 3004, "modDemoTests", "frmTaskList (DAO) did not auto-sync after frmTaskDetail save."
+    End If
+    If Forms("frmTaskListAdo").Recordset.RecordCount <> (lngInitialSqliteCnt + 1) Then
+        Err.Raise vbObjectError + 3010, "modDemoTests", "frmTaskListAdo (ADO) did not auto-sync after frmTaskDetail save."
     End If
 
-    strStep = "4-InlineUpdateSync"
-    PushBufferRowToSQLite lngNewId, "E2E Verified Inline Update", "Analytics", "Critical", 888.5@, DateSerial(2026, 12, 31), True
-    Forms("frmTaskList").RefreshFromSQLite lngNewId
+    strStep = "5-AdoVirtualCheckboxAndBatchComplete"
+    Forms("frmTaskListAdo").SetAllRowsSelected False
+    Set objAdoRs = Forms("frmTaskListAdo").Recordset.Clone
+    objAdoRs.MoveFirst
+    objAdoRs.Find "TaskID = " & lngNewId
+    If objAdoRs.EOF Then
+        Err.Raise vbObjectError + 3011, "modDemoTests", "Could not locate newly inserted TaskID in ADO Recordset."
+    End If
+    objAdoRs.Fields.Item("IsSelected").Value = True
+    objAdoRs.Update
+    Set colSelIds = Forms("frmTaskListAdo").SelectedTaskIds()
+    If colSelIds.Count <> 1 Or CLng(colSelIds(1)) <> lngNewId Then
+        Err.Raise vbObjectError + 3012, "modDemoTests", "Virtual ADO [IsSelected] checkbox state did not return expected TaskID."
+    End If
+    If Forms("frmTaskListAdo").BatchCompleteSelectedRows() <> 1 Then
+        Err.Raise vbObjectError + 3013, "modDemoTests", "BatchCompleteSelectedRows did not update 1 selected ADO row."
+    End If
 
-    strStep = "4b-ReloadDetailCheck"
+    strStep = "5b-AdoInlineSaveToSQLite"
+    Set objAdoRs = Forms("frmTaskListAdo").Recordset
+    objAdoRs.MoveFirst
+    objAdoRs.Find "TaskID = " & lngNewId
+    objAdoRs.Fields.Item("TaskTitle").Value = "E2E Verified ADO Inline Update"
+    objAdoRs.Fields.Item("EstimateCost").Value = 888.5@
+    objAdoRs.Update
+    TasksRepo().SaveFromAdoRow objAdoRs, True
+
+    strStep = "5c-ReloadDetailCheck"
     Forms("frmTaskDetail").LoadTaskFromSQLite lngNewId
     strSavedTitle = CStr(Forms("frmTaskDetail")!txtTaskTitle.Value)
     curSavedCost = CCur(Forms("frmTaskDetail")!txtEstimateCost.Value)
-    If strSavedTitle <> "E2E Verified Inline Update" Or curSavedCost <> 888.5@ Then
-        Err.Raise vbObjectError + 3005, "modDemoTests", "Single-page form did not read inline SQLite update."
+    If strSavedTitle <> "E2E Verified ADO Inline Update" Or curSavedCost <> 888.5@ Or Not CBool(Forms("frmTaskDetail")!chkIsCompleted.Value) Then
+        Err.Raise vbObjectError + 3005, "modDemoTests", "Single-page form did not read ADO inline + batch SQLite updates."
     End If
 
-    strStep = "5-Cleanup"
+    strStep = "6-CrossLibraryStudioCheck"
+    Dim strStudioKey As String
+    strStudioKey = AccessSQLite.OpenSQLiteStudio(DemoSqliteFilePath())
+    If Len(strStudioKey) = 0 Or AccessSQLite.OpenSQLiteStudioCount() < 1 Then
+        Err.Raise vbObjectError + 3014, "modDemoTests", "OpenSQLiteStudio cross-library window failed to open."
+    End If
+    AccessSQLite.CloseAllSQLiteStudios
+
+    strStep = "7-Cleanup"
     DoCmd.Close acForm, "frmTaskDetail", acSaveNo
     TasksRepo().DeleteRecord lngNewId, blnForceHardDelete:=True
     Forms("frmTaskList").RefreshFromSQLite 0
+    Forms("frmTaskListAdo").RefreshFromSQLite 0
+    DoCmd.Close acForm, "frmTaskListAdo", acSaveNo
     DoCmd.Close acForm, "frmTaskList", acSaveNo
 
-    RunDemoFormsVerification = "PASS | Initial=" & lngInitialSqliteCnt & " | FilteredEng=" & lngFilteredCnt & " | RoundTripID=" & lngNewId
+    RunDemoFormsVerification = "PASS | DAO=" & lngInitialSqliteCnt & " | ADO=" & lngInitialSqliteCnt & " | Studio=" & strStudioKey & " | RoundTripID=" & lngNewId
     Exit Function
 
 TestErr:
@@ -95,6 +159,7 @@ TestErr:
     On Error Resume Next
     If lngNewId > 0 Then TasksRepo().DeleteRecord lngNewId, True
     DoCmd.Close acForm, "frmTaskDetail", acSaveNo
+    DoCmd.Close acForm, "frmTaskListAdo", acSaveNo
     DoCmd.Close acForm, "frmTaskList", acSaveNo
     On Error GoTo 0
     RunDemoFormsVerification = strErr

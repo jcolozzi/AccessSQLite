@@ -4,9 +4,11 @@ Option Explicit
 
 ' =============================================================================
 ' modDemoDataService
-' Data service connecting AccessSQLiteDemo.accdb forms (frmTaskList Continuous
-' Form and frmTaskDetail Single-Page Form) to AccessSQLiteDemo.db via the
-' referenced AccessSQLite VBA Class Library & ORM.
+' Data service connecting AccessSQLiteDemo.accdb forms:
+'   1. frmTaskList    - Continuous Form backed by DAO staging table (tblTaskBuffer)
+'   2. frmTaskListAdo - Continuous Form backed by In-Memory ADODB.Recordset (zero temp table)
+'   3. frmTaskDetail  - Unbound Single-Page Form backed by clsTaskItem (ISQLiteEntity)
+'   4. SQLite Studio  - Monaco SQL front-end client hosted in AccessSQLite.accdb
 ' =============================================================================
 
 Private m_SqliteConn As AccessSQLite.clsSQLiteConnection
@@ -139,17 +141,13 @@ Private Function MakeSeedRow( _
     Set MakeSeedRow = dictRow
 End Function
 
-' Queries SQLite via clsSQLiteQueryBuilder and refreshes local tblTaskBuffer for frmTaskList.
-Public Function SyncBufferFromSQLite( _
+' Shared filtered QueryBuilder used by both the DAO Staging Form and the ADO In-Memory Form.
+Public Function BuildFilteredTasksQuery( _
     Optional ByVal strSearchText As String = vbNullString, _
     Optional ByVal strCategoryFilter As String = vbNullString, _
-    Optional ByVal strStatusFilter As String = "Active") As Long
+    Optional ByVal strStatusFilter As String = "Active") As AccessSQLite.clsSQLiteQueryBuilder
 
     Dim objQb As AccessSQLite.clsSQLiteQueryBuilder
-    Dim colRows As Collection
-    Dim dictRow As Scripting.Dictionary
-    Dim dbLocal As DAO.Database
-    Dim rstBuf As DAO.Recordset
     Dim strCleanSearch As String
     Dim strCleanCat As String
     Dim strCleanStatus As String
@@ -178,7 +176,69 @@ Public Function SyncBufferFromSQLite( _
         objQb.WhereContains "TaskTitle", strCleanSearch
     End If
 
-    Set colRows = objQb.OrderByCol("IsCompleted", False).OrderByCol("TaskID", False).ToRowsRaw()
+    Set BuildFilteredTasksQuery = objQb.OrderByCol("IsCompleted", False).OrderByCol("TaskID", False)
+End Function
+
+' Approach B: Builds a pure in-memory disconnected ADODB.Recordset with a virtual [IsSelected]
+' checkbox column -- zero temp tables, zero front-end bloat!
+Public Function QueryTasksAdoFromSQLite( _
+    Optional ByVal strSearchText As String = vbNullString, _
+    Optional ByVal strCategoryFilter As String = vbNullString, _
+    Optional ByVal strStatusFilter As String = "Active") As Object
+
+    Dim objQb As AccessSQLite.clsSQLiteQueryBuilder
+    Set objQb = BuildFilteredTasksQuery(strSearchText, strCategoryFilter, strStatusFilter)
+    Set QueryTasksAdoFromSQLite = objQb.ToAdoRecordset(True, "IsSelected")
+End Function
+
+Public Function BatchSetCompletedInSQLite(ByVal colTaskIds As Collection, ByVal blnCompleted As Boolean) As Long
+    Dim objConn As AccessSQLite.clsSQLiteConnection
+    Dim varId As Variant
+    Dim dictUpd As Scripting.Dictionary
+    Dim lngCount As Long
+
+    If colTaskIds Is Nothing Then Exit Function
+    If colTaskIds.Count = 0 Then Exit Function
+
+    Set objConn = GetDemoConnection()
+    objConn.BeginTrans
+    On Error GoTo BatchErr
+
+    Set dictUpd = AccessSQLite.NewTextDict()
+    dictUpd("IsCompleted") = blnCompleted
+
+    For Each varId In colTaskIds
+        TasksRepo().UpdateRecord CLng(varId), dictUpd, False
+        lngCount = lngCount + 1
+    Next varId
+
+    objConn.CommitTrans
+    BatchSetCompletedInSQLite = lngCount
+    Exit Function
+
+BatchErr:
+    Dim lngErr As Long
+    Dim strDesc As String
+    lngErr = Err.Number
+    strDesc = Err.Description
+    objConn.RollbackTrans
+    Err.Raise lngErr, "modDemoDataService.BatchSetCompletedInSQLite", strDesc
+End Function
+
+' Approach A: Queries SQLite via clsSQLiteQueryBuilder and refreshes local tblTaskBuffer for frmTaskList.
+Public Function SyncBufferFromSQLite( _
+    Optional ByVal strSearchText As String = vbNullString, _
+    Optional ByVal strCategoryFilter As String = vbNullString, _
+    Optional ByVal strStatusFilter As String = "Active") As Long
+
+    Dim objQb As AccessSQLite.clsSQLiteQueryBuilder
+    Dim colRows As Collection
+    Dim dictRow As Scripting.Dictionary
+    Dim dbLocal As DAO.Database
+    Dim rstBuf As DAO.Recordset
+
+    Set objQb = BuildFilteredTasksQuery(strSearchText, strCategoryFilter, strStatusFilter)
+    Set colRows = objQb.ToRowsRaw()
 
     On Error GoTo SyncError
     Set dbLocal = CurrentDb
@@ -325,12 +385,15 @@ Public Function FormatTimestampDisplay(ByVal varStamp As Variant) As String
     End If
 End Function
 
-' Notifies frmTaskList to re-sync from SQLite whenever frmTaskDetail saves or deletes a record.
+' Notifies both Continuous Forms (DAO frmTaskList and In-Memory ADO frmTaskListAdo) whenever data changes.
 Public Sub NotifyTaskListChanged(Optional ByVal lngFocusTaskId As Long = 0)
     On Error Resume Next
     If CurrentProject.AllForms.Count > 0 Then
         If CurrentProject.AllForms("frmTaskList").IsLoaded Then
             Forms("frmTaskList").RefreshFromSQLite lngFocusTaskId
+        End If
+        If CurrentProject.AllForms("frmTaskListAdo").IsLoaded Then
+            Forms("frmTaskListAdo").RefreshFromSQLite lngFocusTaskId
         End If
     End If
     On Error GoTo 0
@@ -365,3 +428,4 @@ Public Function EnsureDemoProjectSetup() As String
     DoCmd.RunCommand 126 ' acCmdCompileAndSaveAllModules
     On Error GoTo 0
 End Function
+

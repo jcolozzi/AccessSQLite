@@ -261,6 +261,28 @@ Public Function GetBundledDllDirectory() As String
     GetBundledDllDirectory = strRoot
 End Function
 
+' Converts UNC paths (\\server\share\...) back to mapped drive letters (e.g. K:\...) required by Access's https://msaccess/ virtual host.
+Public Function ToMappedDrivePath(ByVal strPath As String) As String
+    Dim objFso As New Scripting.FileSystemObject
+    Dim objDrive As Scripting.Drive
+    Dim strShare As String
+
+    ToMappedDrivePath = strPath
+    If Left$(strPath, 2) <> "\\" Then Exit Function
+    On Error Resume Next
+    For Each objDrive In objFso.Drives
+        strShare = vbNullString
+        If objDrive.DriveType = Remote Then strShare = objDrive.ShareName
+        If Len(strShare) > 0 Then
+            If StrComp(Left$(strPath, Len(strShare) + 1), strShare & "\", vbTextCompare) = 0 Then
+                ToMappedDrivePath = objDrive.DriveLetter & ":" & Mid$(strPath, Len(strShare) + 1)
+                Exit Function
+            End If
+        End If
+    Next objDrive
+    On Error GoTo 0
+End Function
+
 ' Quotes an identifier (or alias.column / table.*) safely for SQLite SQL using double quotes.
 Public Function QuoteSQLiteIdent(ByVal strIdent As String) As String
     Dim strClean As String
@@ -562,10 +584,11 @@ Public Function EnsureLibraryProjectName(Optional ByVal strProjectName As String
     On Error GoTo 0
 End Function
 
-' Saves all VBA modules and compiles/saves the VBProject name permanently to disk.
+' Saves all VBA modules, class modules, and forms and compiles/saves the VBProject name permanently to disk.
 Public Function SaveAllVbaModules() As Long
     Dim objProj As Object
     Dim objComp As Object
+    Dim objFrm As Object
     Dim strTargetFile As String
     Dim lngSaved As Long
     On Error Resume Next
@@ -574,12 +597,18 @@ Public Function SaveAllVbaModules() As Long
     For Each objProj In Application.VBE.VBProjects
         If Right$(LCase$(CStr(objProj.FileName)), Len(strTargetFile)) = strTargetFile Then
             For Each objComp In objProj.VBComponents
-                DoCmd.Save acModule, objComp.Name
-                lngSaved = lngSaved + 1
+                If objComp.Type = 1 Or objComp.Type = 2 Then
+                    DoCmd.Save acModule, objComp.Name
+                    lngSaved = lngSaved + 1
+                End If
             Next objComp
             Exit For
         End If
     Next objProj
+    For Each objFrm In CodeProject.AllForms
+        DoCmd.Save acForm, objFrm.Name
+        lngSaved = lngSaved + 1
+    Next objFrm
     DoCmd.RunCommand 126 ' acCmdCompileAndSaveAllModules
     On Error GoTo 0
     SaveAllVbaModules = lngSaved

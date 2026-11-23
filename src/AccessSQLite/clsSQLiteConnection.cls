@@ -712,6 +712,36 @@ Public Function NewAccessBridge(Optional ByVal objDaoDb As DAO.Database = Nothin
     Set NewAccessBridge = objBridge
 End Function
 
+Public Function NewAdoBridge() As clsSQLiteAdoBridge
+    Dim objAdo As clsSQLiteAdoBridge
+    Set objAdo = New clsSQLiteAdoBridge
+    objAdo.InitAdoBridge Me
+    Set NewAdoBridge = objAdo
+End Function
+
+' Materializes a parameterized SQLite SELECT into a disconnected in-memory ADODB.Recordset.
+Public Function QueryAdoRecordset(ByVal strSql As String, ParamArray varParams() As Variant) As Object
+    Dim varPassed As Variant
+    varPassed = varParams
+    Set QueryAdoRecordset = QueryAdoParams(strSql, varPassed, Nothing, False, "IsSelected")
+End Function
+
+Public Function QueryAdoParams( _
+    ByVal strSql As String, _
+    ByVal varParamList As Variant, _
+    Optional ByVal objTableMap As clsSQLiteTableMap = Nothing, _
+    Optional ByVal blnIncludeSelectColumn As Boolean = False, _
+    Optional ByVal strSelectColumnName As String = "IsSelected") As Object
+
+    Dim curStart As Currency
+    EnsureOpen
+    curStart = StartPerfTimer()
+    Set QueryAdoParams = NewAdoBridge().QueryToAdoRecordset( _
+        strSql, varParamList, objTableMap, blnIncludeSelectColumn, strSelectColumnName)
+    m_QueryCount = m_QueryCount + 1
+    RecordTrace "ADO: " & strSql, curStart
+End Function
+
 ' =============================================================================
 ' Internal Helpers
 ' =============================================================================

@@ -448,6 +448,17 @@ Public Function ToRowsRaw() As Collection
     Set ToRowsRaw = m_Conn.QueryParams(ToSql(), BoundParameters(True), True, m_TableMap)
 End Function
 
+' Materializes this query as an updatable disconnected in-memory ADODB.Recordset
+' (suitable for `Set Me.Recordset = ...` on Access Continuous Forms with zero temp tables).
+Public Function ToAdoRecordset( _
+    Optional ByVal blnIncludeSelectColumn As Boolean = False, _
+    Optional ByVal strSelectColumnName As String = "IsSelected") As Object
+
+    EnsureConn
+    Set ToAdoRecordset = m_Conn.QueryAdoParams( _
+        ToSql(), BoundParameters(True), m_TableMap, blnIncludeSelectColumn, strSelectColumnName)
+End Function
+
 Public Function FirstRow() As Scripting.Dictionary
     Dim lngSavedLimit As Long
     Dim colRows As Collection

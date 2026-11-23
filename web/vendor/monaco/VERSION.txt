@@ -1,0 +1,1 @@
+monaco-editor 0.52.2 (min/vs AMD build, English only) from registry.npmjs.org

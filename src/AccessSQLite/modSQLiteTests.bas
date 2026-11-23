@@ -30,6 +30,8 @@ Public Function RunAllSQLiteTests() As String
     TestSchemaAndQueryBuilder
     TestOrmRepoEntityEagerAndUow
     TestMigratorAndAccessBridge
+    TestAdoBridgeAndInMemoryRecordsets
+    TestStudioHostHeadless
 
     dblMs = ElapsedPerfMs(curStart)
     If m_Failed = 0 Then
@@ -520,4 +522,134 @@ Private Function AccessTableExistsInCurrentDb(ByVal strTbl As String) As Boolean
         End If
     Next tdf
 End Function
+
+
+' -----------------------------------------------------------------------------
+' 7. In-Memory Disconnected ADODB.Recordset Bridge & Virtual Checkbox Selection
+' -----------------------------------------------------------------------------
+Private Sub TestAdoBridgeAndInMemoryRecordsets()
+    Dim objDb As clsSQLiteConnection
+    Dim mapItems As clsSQLiteTableMap
+    Dim repoItems As clsSQLiteRepository
+    Dim objAdoBridge As clsSQLiteAdoBridge
+    Dim objRs As Object
+    Dim dictSeed As Scripting.Dictionary
+    Dim colSelected As Collection
+    Dim lngNewId As Long
+
+    Set objDb = OpenSQLiteMemory()
+    Set mapItems = objDb.DefineTable("AdoTasks", "TaskID") _
+        .AddPrimaryKey("TaskID", sqColInt64, True) _
+        .AddColumn("TaskTitle", sqColText, "Title", blnRequired:=True, lngMaxLength:=120) _
+        .AddColumn("BudgetCost", sqColCurrency, "Budget", blnRequired:=True, varDefault:=0@) _
+        .AddColumn("DueDate", sqColDate, "Due date") _
+        .AddColumn("IsDone", sqColBoolean, "Done", blnRequired:=True, varDefault:=False) _
+        .AddColumn("LongNotes", sqColMemo, "Notes") _
+        .AddTimestamps("CreatedAt", "UpdatedAt")
+    objDb.SchemaManager().EnsureTable mapItems
+    Set repoItems = objDb.Repository("AdoTasks")
+
+    Set dictSeed = NewTextDict()
+    dictSeed("TaskTitle") = "First ADO Row": dictSeed("BudgetCost") = 250.5@
+    dictSeed("DueDate") = DateSerial(2026, 12, 10): dictSeed("IsDone") = False
+    dictSeed("LongNotes") = String$(350, "N")
+    repoItems.InsertRecord dictSeed
+
+    Set dictSeed = NewTextDict()
+    dictSeed("TaskTitle") = "Second ADO Row": dictSeed("BudgetCost") = 750.25@
+    dictSeed("DueDate") = DateSerial(2026, 12, 20): dictSeed("IsDone") = True
+    dictSeed("LongNotes") = "Short note"
+    repoItems.InsertRecord dictSeed
+
+    ' Build disconnected ADODB.Recordset with virtual IsSelected checkbox column
+    Set objRs = repoItems.NewQuery().OrderByCol("TaskID").ToAdoRecordset(True, "IsSelected")
+    AssertTrue Not objRs Is Nothing, "ToAdoRecordset returned ADODB.Recordset"
+    AssertTrue objRs.RecordCount = 2, "ADO RecordCount = 2 without MoveLast"
+    AssertTrue CBool(objRs.Fields.Item("IsSelected").Value) = False, "Virtual IsSelected starts False"
+    AssertTrue Len(CStr(objRs.Fields.Item("LongNotes").Value)) = 350, "ADO >255-char Memo preserved"
+    AssertTrue CCur(objRs.Fields.Item("BudgetCost").Value) = 250.5@, "ADO Currency preserved"
+    AssertTrue CDate(objRs.Fields.Item("DueDate").Value) = DateSerial(2026, 12, 10), "ADO Date hydrated"
+
+    ' Toggle virtual IsSelected on row 1 & edit BudgetCost inline -> write back to SQLite
+    objRs.Fields.Item("IsSelected").Value = True
+    objRs.Fields.Item("BudgetCost").Value = 300.75@
+    objRs.Update
+    repoItems.SaveFromAdoRow objRs, True, "IsSelected"
+
+    AssertTrue CCur(objDb.QueryScalar("SELECT BudgetCost FROM AdoTasks WHERE TaskID = 1;")) = 300.75@, _
+        "SaveFromAdoRow persisted edited BudgetCost to SQLite"
+
+    ' Add a brand-new row directly in the in-memory ADODB.Recordset and save to SQLite
+    objRs.AddNew
+    objRs.Fields.Item("IsSelected").Value = True
+    objRs.Fields.Item("TaskID").Value = 0
+    objRs.Fields.Item("TaskTitle").Value = "Inserted Via Disconnected ADO"
+    objRs.Fields.Item("BudgetCost").Value = 999@
+    objRs.Fields.Item("IsDone").Value = False
+    objRs.Update
+    lngNewId = CLng(repoItems.SaveFromAdoRow(objRs, True, "IsSelected"))
+    AssertTrue lngNewId = 3 And CLng(objRs.Fields.Item("TaskID").Value) = 3, _
+        "SaveFromAdoRow inserted new ADO row and hydrated TaskID=3 back onto ADO recordset"
+
+    ' Verify GetSelectedKeys via Clone (rows 1 and 3 were checked)
+    Set objAdoBridge = objDb.NewAdoBridge()
+    Set colSelected = objAdoBridge.GetSelectedKeys(objRs, "TaskID", "IsSelected")
+    AssertTrue colSelected.Count = 2 And CLng(colSelected(1)) = 1 And CLng(colSelected(2)) = 3, _
+        "GetSelectedKeys returned checked rows [1, 3]"
+
+    objAdoBridge.SetAllSelected objRs, False, "IsSelected"
+    AssertTrue objAdoBridge.GetSelectedKeys(objRs, "TaskID", "IsSelected").Count = 0, _
+        "SetAllSelected(False) cleared virtual checkboxes"
+
+    ' Import disconnected ADODB.Recordset into a brand-new SQLite table (excluding IsSelected)
+    AssertTrue objAdoBridge.ImportAdoRecordsetToSQLite(objRs, "AdoTasksCopy", True, "IsSelected") = 3, _
+        "ImportAdoRecordsetToSQLite imported 3 rows"
+    AssertTrue CLng(objDb.QueryScalar("SELECT COUNT(*) FROM AdoTasksCopy;")) = 3, _
+        "AdoTasksCopy row count = 3"
+
+    objRs.Close
+    objDb.CloseConnection
+End Sub
+
+
+
+
+' -----------------------------------------------------------------------------
+' 8. Monaco SQLite Studio Host Bridge (Schema, Stored Queries, Multi-SQL, Explain)
+' -----------------------------------------------------------------------------
+Private Sub TestStudioHostHeadless()
+    Dim strReply As String
+
+    ResetHeadlessSQLiteStudio
+    strReply = SQLiteStudioDispatchHeadless(":memory:", "{""id"":1,""action"":""studio.init"",""payload"":{}}")
+    AssertTrue InStr(1, strReply, """ok"":true", vbBinaryCompare) > 0, "Studio studio.init ok"
+
+    strReply = SQLiteStudioDispatchHeadless("", _
+        "{""id"":2,""action"":""studio.execSql"",""payload"":{""sql"":""CREATE TABLE StudioItems (ItemID INTEGER PRIMARY KEY, ItemName TEXT NOT NULL); INSERT INTO StudioItems (ItemName) VALUES ('Monaco'),('Ribbon'); SELECT ItemID, ItemName FROM StudioItems ORDER BY ItemID;"",""rowLimit"":100}}")
+    AssertTrue InStr(1, strReply, """hasResultSet"":true", vbBinaryCompare) > 0 And _
+               InStr(1, strReply, """schemaChanged"":true", vbBinaryCompare) > 0 And _
+               InStr(1, strReply, "Monaco", vbBinaryCompare) > 0, _
+               "Studio multi-statement DDL + INSERT + SELECT returned grid & schemaChanged"
+
+    strReply = SQLiteStudioDispatchHeadless("", _
+        "{""id"":3,""action"":""studio.getSchema"",""payload"":{}}")
+    AssertTrue InStr(1, strReply, """StudioItems""", vbBinaryCompare) > 0 And _
+               InStr(1, strReply, """ItemName""", vbBinaryCompare) > 0, _
+               "Studio studio.getSchema returned StudioItems & columns"
+
+    strReply = SQLiteStudioDispatchHeadless("", _
+        "{""id"":4,""action"":""studio.saveQuery"",""payload"":{""name"":""All Studio Items"",""category"":""Demo"",""sql"":""SELECT * FROM StudioItems;"",""description"":""Test saved query""}}")
+    AssertTrue InStr(1, strReply, """All Studio Items""", vbBinaryCompare) > 0, "Studio studio.saveQuery persisted stored query"
+
+    strReply = SQLiteStudioDispatchHeadless("", _
+        "{""id"":5,""action"":""studio.explainSql"",""payload"":{""sql"":""SELECT * FROM StudioItems WHERE ItemID = 1;""}}")
+    AssertTrue InStr(1, strReply, """nodes"":", vbBinaryCompare) > 0, "Studio studio.explainSql returned query plan nodes"
+
+    strReply = SQLiteStudioDispatchHeadless("", _
+        "{""id"":6,""action"":""studio.deleteQuery"",""payload"":{""name"":""All Studio Items""}}")
+    AssertTrue InStr(1, strReply, """savedQueries"":[]", vbBinaryCompare) > 0, "Studio studio.deleteQuery deleted stored query"
+
+    ResetHeadlessSQLiteStudio
+End Sub
+
 

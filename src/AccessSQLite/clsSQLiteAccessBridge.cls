@@ -172,7 +172,9 @@ Public Function ImportSQLiteToAccess( _
         strSql = "SELECT * FROM " & QuoteSQLiteIdent(strSqliteTableOrSql) & ";"
     End If
 
-    If IsMissing(varParamList) Then
+    If IsObject(varParamList) Then
+        Set varPassed = varParamList
+    ElseIf IsMissing(varParamList) Then
         varPassed = Empty
     Else
         varPassed = varParamList

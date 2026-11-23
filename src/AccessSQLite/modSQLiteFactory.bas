@@ -58,6 +58,10 @@ Public Function NewSQLiteAccessBridge( _
     Set NewSQLiteAccessBridge = objConn.NewAccessBridge(objDaoDb)
 End Function
 
+Public Function NewSQLiteAdoBridge(ByVal objConn As clsSQLiteConnection) As clsSQLiteAdoBridge
+    Set NewSQLiteAdoBridge = objConn.NewAdoBridge()
+End Function
+
 Public Function NewSQLiteUnitOfWork(ByVal objConn As clsSQLiteConnection) As clsSQLiteUnitOfWork
     Set NewSQLiteUnitOfWork = objConn.NewUnitOfWork()
 End Function

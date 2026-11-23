@@ -132,6 +132,32 @@ Public Function ListAllRaw( _
     Set ListAllRaw = objQb.ToRowsRaw()
 End Function
 
+' Materializes all active rows into an in-memory ADODB.Recordset (optionally including a virtual IsSelected checkbox column).
+Public Function ToAdoRecordset( _
+    Optional ByVal strOrderByCol As String = vbNullString, _
+    Optional ByVal blnDescending As Boolean = False, _
+    Optional ByVal blnIncludeSelectColumn As Boolean = False, _
+    Optional ByVal strSelectColumnName As String = "IsSelected") As Object
+
+    Dim objQb As clsSQLiteQueryBuilder
+    Set objQb = NewQuery()
+    If Len(Trim$(strOrderByCol)) > 0 Then
+        objQb.OrderByCol strOrderByCol, blnDescending
+    ElseIf Len(m_Map.PrimaryKeyColumn) > 0 And m_Map.HasColumn(m_Map.PrimaryKeyColumn) Then
+        objQb.OrderByCol m_Map.PrimaryKeyColumn, False
+    End If
+    Set ToAdoRecordset = objQb.ToAdoRecordset(blnIncludeSelectColumn, strSelectColumnName)
+End Function
+
+' Persists the current record of a form-bound in-memory ADODB.Recordset directly into SQLite.
+Public Function SaveFromAdoRow( _
+    ByVal objAdoRs As Object, _
+    Optional ByVal blnDirtyOnly As Boolean = True, _
+    Optional ByVal strExcludeColumn As String = "IsSelected") As Variant
+
+    SaveFromAdoRow = m_Conn.NewAdoBridge().SaveAdoRowToRepository(objAdoRs, Me, blnDirtyOnly, strExcludeColumn)
+End Function
+
 ' Inserts a new row and returns its primary key (generated ROWID/AutoIncrement or explicit PK).
 Public Function InsertRecord( _
     ByVal dictValues As Scripting.Dictionary, _

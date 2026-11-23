@@ -31,8 +31,7 @@ Public Function RunAllSQLiteTests() As String
     TestOrmRepoEntityEagerAndUow
     TestMigratorAndAccessBridge
     TestAdoBridgeAndInMemoryRecordsets
-    TestStudioHostHeadless
-
+    TestAxLiteHostHeadless
     dblMs = ElapsedPerfMs(curStart)
     If m_Failed = 0 Then
         RunAllSQLiteTests = "PASS | Assertions=" & m_Passed & " | Failed=0 | Elapsed=" & Format$(dblMs, "0.0") & " ms"
@@ -615,41 +614,39 @@ End Sub
 
 
 ' -----------------------------------------------------------------------------
-' 8. Monaco SQLite Studio Host Bridge (Schema, Stored Queries, Multi-SQL, Explain)
+' 8. AxLite SQLite Editor Host Bridge (Schema, Stored Queries, Multi-SQL, Explain)
 ' -----------------------------------------------------------------------------
-Private Sub TestStudioHostHeadless()
+Private Sub TestAxLiteHostHeadless()
     Dim strReply As String
 
-    ResetHeadlessSQLiteStudio
-    strReply = SQLiteStudioDispatchHeadless(":memory:", "{""id"":1,""action"":""studio.init"",""payload"":{}}")
-    AssertTrue InStr(1, strReply, """ok"":true", vbBinaryCompare) > 0, "Studio studio.init ok"
+    ResetHeadlessAxLite
+    strReply = AxLiteDispatchHeadless(":memory:", "{""id"":1,""action"":""axlite.init"",""payload"":{}}")
+    AssertTrue InStr(1, strReply, """ok"":true", vbBinaryCompare) > 0, "AxLite axlite.init ok"
 
-    strReply = SQLiteStudioDispatchHeadless("", _
-        "{""id"":2,""action"":""studio.execSql"",""payload"":{""sql"":""CREATE TABLE StudioItems (ItemID INTEGER PRIMARY KEY, ItemName TEXT NOT NULL); INSERT INTO StudioItems (ItemName) VALUES ('Monaco'),('Ribbon'); SELECT ItemID, ItemName FROM StudioItems ORDER BY ItemID;"",""rowLimit"":100}}")
+    strReply = AxLiteDispatchHeadless("", _
+        "{""id"":2,""action"":""axlite.execSql"",""payload"":{""sql"":""CREATE TABLE AxLiteItems (ItemID INTEGER PRIMARY KEY, ItemName TEXT NOT NULL); INSERT INTO AxLiteItems (ItemName) VALUES ('Monaco'),('Ribbon'); SELECT ItemID, ItemName FROM AxLiteItems ORDER BY ItemID;"",""rowLimit"":100}}")
     AssertTrue InStr(1, strReply, """hasResultSet"":true", vbBinaryCompare) > 0 And _
                InStr(1, strReply, """schemaChanged"":true", vbBinaryCompare) > 0 And _
                InStr(1, strReply, "Monaco", vbBinaryCompare) > 0, _
-               "Studio multi-statement DDL + INSERT + SELECT returned grid & schemaChanged"
+               "AxLite multi-statement DDL + INSERT + SELECT returned grid & schemaChanged"
 
-    strReply = SQLiteStudioDispatchHeadless("", _
-        "{""id"":3,""action"":""studio.getSchema"",""payload"":{}}")
-    AssertTrue InStr(1, strReply, """StudioItems""", vbBinaryCompare) > 0 And _
+    strReply = AxLiteDispatchHeadless("", _
+        "{""id"":3,""action"":""axlite.getSchema"",""payload"":{}}")
+    AssertTrue InStr(1, strReply, """AxLiteItems""", vbBinaryCompare) > 0 And _
                InStr(1, strReply, """ItemName""", vbBinaryCompare) > 0, _
-               "Studio studio.getSchema returned StudioItems & columns"
+               "AxLite axlite.getSchema returned AxLiteItems & columns"
 
-    strReply = SQLiteStudioDispatchHeadless("", _
-        "{""id"":4,""action"":""studio.saveQuery"",""payload"":{""name"":""All Studio Items"",""category"":""Demo"",""sql"":""SELECT * FROM StudioItems;"",""description"":""Test saved query""}}")
-    AssertTrue InStr(1, strReply, """All Studio Items""", vbBinaryCompare) > 0, "Studio studio.saveQuery persisted stored query"
+    strReply = AxLiteDispatchHeadless("", _
+        "{""id"":4,""action"":""axlite.saveQuery"",""payload"":{""name"":""All AxLite Items"",""category"":""Demo"",""sql"":""SELECT * FROM AxLiteItems;"",""description"":""Test saved query""}}")
+    AssertTrue InStr(1, strReply, """All AxLite Items""", vbBinaryCompare) > 0, "AxLite axlite.saveQuery persisted stored query"
 
-    strReply = SQLiteStudioDispatchHeadless("", _
-        "{""id"":5,""action"":""studio.explainSql"",""payload"":{""sql"":""SELECT * FROM StudioItems WHERE ItemID = 1;""}}")
-    AssertTrue InStr(1, strReply, """nodes"":", vbBinaryCompare) > 0, "Studio studio.explainSql returned query plan nodes"
+    strReply = AxLiteDispatchHeadless("", _
+        "{""id"":5,""action"":""axlite.explainSql"",""payload"":{""sql"":""SELECT * FROM AxLiteItems WHERE ItemID = 1;""}}")
+    AssertTrue InStr(1, strReply, """nodes"":", vbBinaryCompare) > 0, "AxLite axlite.explainSql returned query plan nodes"
 
-    strReply = SQLiteStudioDispatchHeadless("", _
-        "{""id"":6,""action"":""studio.deleteQuery"",""payload"":{""name"":""All Studio Items""}}")
-    AssertTrue InStr(1, strReply, """savedQueries"":[]", vbBinaryCompare) > 0, "Studio studio.deleteQuery deleted stored query"
+    strReply = AxLiteDispatchHeadless("", _
+        "{""id"":6,""action"":""axlite.deleteQuery"",""payload"":{""name"":""All AxLite Items""}}")
+    AssertTrue InStr(1, strReply, """savedQueries"":[]", vbBinaryCompare) > 0, "AxLite axlite.deleteQuery deleted stored query"
 
-    ResetHeadlessSQLiteStudio
+    ResetHeadlessAxLite
 End Sub
-
-

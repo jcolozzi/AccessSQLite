@@ -1,4 +1,4 @@
-Attribute VB_Name = "clsSQLiteStudioHost"
+Attribute VB_Name = "clsAxLiteHost"
 Attribute VB_Base = "0{FCFB3D2A-A0FA-1068-A738-08002B3371B5}"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
@@ -10,13 +10,14 @@ Option Compare Database
 Option Explicit
 
 ' =============================================================================
-' clsSQLiteStudioHost
-' Host controller for the Monaco-based AccessSQLite Studio front-end client.
-' Drives both the live Edge Browser Control form (frmSQLiteStudio) and
+' clsAxLiteHost
+' Host controller for the Monaco-based AxLite SQLite front-end client.
+' Drives both the live Edge Browser Control form (frmAxLite) and
 ' headless JSON dispatch for automated verification.
 ' =============================================================================
 
-Private Const SAVED_QUERIES_TABLE As String = "_studio_saved_queries"
+Private Const SAVED_QUERIES_TABLE As String = "_axlite_saved_queries"
+Private Const LEGACY_SAVED_QUERIES_TABLE As String = "_studio_saved_queries"
 Private Const ACTIVE_TIMER_MS As Long = 40
 Private Const IDLE_TIMER_MS As Long = 150
 Private Const INITIAL_LOAD_DELAY_MS As Long = 15
@@ -106,7 +107,7 @@ Public Sub OnTimer()
         m_dblLastActivity = Timer
         m_objEdge.Properties("OnBeforeNavigation").Value = "[Event Procedure]"
         m_objEdge.Properties("OnDocumentComplete").Value = "[Event Procedure]"
-        m_Bridge.LoadPage StudioHtmlFilePath()
+        m_Bridge.LoadPage AxLiteHtmlFilePath()
     Else
         ProcessBridgeInbox
     End If
@@ -191,32 +192,32 @@ Public Function DispatchEnvelope(ByVal dicEnv As Scripting.Dictionary) As Script
     End If
 
     Select Case strAction
-        Case "studio.init"
+        Case "axlite.init"
             Set varData = BuildInitPayload()
 
-        Case "studio.getSchema"
+        Case "axlite.getSchema"
             Set varData = BuildSchemaPayload()
 
-        Case "studio.openPath"
+        Case "axlite.openPath"
             OpenTargetDatabase CStr(Nz(dicPayload("dbPath"), ":memory:"))
             Set varData = BuildInitPayload()
 
-        Case "studio.openDialog"
+        Case "axlite.openDialog"
             Set varData = HandleOpenDatabaseDialog(CStr(Nz(dicPayload("mode"), "open")))
 
-        Case "studio.execSql"
-            Set varData = ExecuteStudioSql( _
+        Case "axlite.execSql"
+            Set varData = ExecuteAxLiteSql( _
                 CStr(Nz(dicPayload("sql"), vbNullString)), _
                 CLng(Nz(dicPayload("rowLimit"), 1000)))
 
-        Case "studio.explainSql"
-            Set varData = ExplainStudioSql(CStr(Nz(dicPayload("sql"), vbNullString)))
+        Case "axlite.explainSql"
+            Set varData = ExplainAxLiteSql(CStr(Nz(dicPayload("sql"), vbNullString)))
 
-        Case "studio.listQueries"
+        Case "axlite.listQueries"
             Set varData = New Scripting.Dictionary
             Set varData("savedQueries") = ListSavedQueries()
 
-        Case "studio.saveQuery"
+        Case "axlite.saveQuery"
             SaveStoredQuery _
                 CStr(Nz(dicPayload("name"), vbNullString)), _
                 CStr(Nz(dicPayload("category"), "General")), _
@@ -225,17 +226,17 @@ Public Function DispatchEnvelope(ByVal dicEnv As Scripting.Dictionary) As Script
             Set varData = New Scripting.Dictionary
             Set varData("savedQueries") = ListSavedQueries()
 
-        Case "studio.deleteQuery"
+        Case "axlite.deleteQuery"
             DeleteStoredQuery CStr(Nz(dicPayload("name"), vbNullString))
             Set varData = New Scripting.Dictionary
             Set varData("savedQueries") = ListSavedQueries()
 
-        Case "studio.dbAction"
+        Case "axlite.dbAction"
             Set varData = HandleDatabaseAction(dicPayload)
 
         Case Else
-            RaiseSQLiteError sqErrInvalidArgument, "clsSQLiteStudioHost.DispatchEnvelope", _
-                "Unsupported Studio action: " & strAction
+            RaiseSQLiteError sqErrInvalidArgument, "clsAxLiteHost.DispatchEnvelope", _
+                "Unsupported AxLite action: " & strAction
     End Select
 
     dicReply("ok") = True
@@ -277,13 +278,26 @@ Private Sub OpenTargetDatabase(ByVal strPath As String)
         m_Conn.OpenConnection strClean, sqProfileAuto, sqDriverAuto
     End If
     m_CurrentDbPath = strClean
+    MigrateLegacySavedQueriesIfPresent
     EnsureStarterQueriesIfDemo
 
     If Not m_frmHost Is Nothing Then
         On Error Resume Next
-        m_frmHost.Caption = "AccessSQLite Studio — " & ExtractLeafName(strClean)
+        m_frmHost.Caption = "AxLite - " & ExtractLeafName(strClean)
         On Error GoTo 0
     End If
+End Sub
+
+Private Sub MigrateLegacySavedQueriesIfPresent()
+    On Error Resume Next
+    If m_Conn.TableExists(LEGACY_SAVED_QUERIES_TABLE) Then
+        If Not m_Conn.TableExists(SAVED_QUERIES_TABLE) Then
+            m_Conn.ExecuteSql "ALTER TABLE """ & LEGACY_SAVED_QUERIES_TABLE & """ RENAME TO """ & SAVED_QUERIES_TABLE & """;"
+        Else
+            m_Conn.ExecuteSql "DROP TABLE IF EXISTS """ & LEGACY_SAVED_QUERIES_TABLE & """;"
+        End If
+    End If
+    On Error GoTo 0
 End Sub
 
 Private Function BuildInitPayload() As Scripting.Dictionary
@@ -320,9 +334,9 @@ Private Function BuildSchemaPayload() As Scripting.Dictionary
     EnsureOpenConn
     Set colMaster = m_Conn.QueryRows( _
         "SELECT type, name, tbl_name, sql FROM sqlite_master " & _
-        "WHERE name NOT LIKE 'sqlite_%' AND name <> ? " & _
+        "WHERE name NOT LIKE 'sqlite_%' AND name <> ? AND name <> ? " & _
         "ORDER BY CASE type WHEN 'table' THEN 1 WHEN 'view' THEN 2 ELSE 3 END, LOWER(name);", _
-        SAVED_QUERIES_TABLE)
+        SAVED_QUERIES_TABLE, LEGACY_SAVED_QUERIES_TABLE)
 
     For Each dicObj In colMaster
         strType = LCase$(CStr(Nz(dicObj("type"), vbNullString)))
@@ -461,7 +475,7 @@ End Function
 ' Multi-Statement SQL Executor & Explain Plan
 ' =============================================================================
 
-Private Function ExecuteStudioSql(ByVal strSql As String, ByVal lngRowLimit As Long) As Scripting.Dictionary
+Private Function ExecuteAxLiteSql(ByVal strSql As String, ByVal lngRowLimit As Long) As Scripting.Dictionary
     Dim dicOut As New Scripting.Dictionary
     Dim colStatements As New Collection
     Dim colCols As Collection
@@ -489,7 +503,7 @@ Private Function ExecuteStudioSql(ByVal strSql As String, ByVal lngRowLimit As L
 
     EnsureOpenConn
     If Len(Trim$(strSql)) = 0 Then
-        RaiseSQLiteError sqErrInvalidArgument, "clsSQLiteStudioHost.ExecuteStudioSql", "SQL text cannot be empty."
+        RaiseSQLiteError sqErrInvalidArgument, "clsAxLiteHost.ExecuteAxLiteSql", "SQL text cannot be empty."
     End If
 
     curTotalStart = StartPerfTimer()
@@ -506,7 +520,7 @@ Private Function ExecuteStudioSql(ByVal strSql As String, ByVal lngRowLimit As L
         lngRc = m_Conn.Driver.PrepareStmt(m_Conn.DbHandle, strPending, ptrStmt, sqPrepareNormal, strRemainder)
         If lngRc <> sqOk Then
             If ptrStmt <> 0 Then m_Conn.Driver.FinalizeStmt ptrStmt
-            RaiseStudioSqliteError lngRc, strPending
+            RaiseAxLiteSqliteError lngRc, strPending
         End If
 
         If ptrStmt <> 0 Then
@@ -555,7 +569,7 @@ Private Function ExecuteStudioSql(ByVal strSql As String, ByVal lngRowLimit As L
 
                 If Not blnTruncated And lngRc <> sqDone And lngRc <> sqOk Then
                     m_Conn.Driver.FinalizeStmt ptrStmt
-                    RaiseStudioSqliteError lngRc, strStmtPreview
+                    RaiseAxLiteSqliteError lngRc, strStmtPreview
                 End If
 
                 m_Conn.Driver.FinalizeStmt ptrStmt
@@ -574,7 +588,7 @@ Private Function ExecuteStudioSql(ByVal strSql As String, ByVal lngRowLimit As L
             Else
                 If lngRc <> sqDone And lngRc <> sqOk Then
                     m_Conn.Driver.FinalizeStmt ptrStmt
-                    RaiseStudioSqliteError lngRc, strStmtPreview
+                    RaiseAxLiteSqliteError lngRc, strStmtPreview
                 End If
                 m_Conn.Driver.FinalizeStmt ptrStmt
                 ptrStmt = 0
@@ -615,10 +629,10 @@ Private Function ExecuteStudioSql(ByVal strSql As String, ByVal lngRowLimit As L
     dicOut("schemaChanged") = blnSchemaChanged
     dicOut("fileSizeBytes") = GetSafeFileBytes(m_CurrentDbPath)
     Set dicOut("statements") = colStatements
-    Set ExecuteStudioSql = dicOut
+    Set ExecuteAxLiteSql = dicOut
 End Function
 
-Private Function ExplainStudioSql(ByVal strSql As String) As Scripting.Dictionary
+Private Function ExplainAxLiteSql(ByVal strSql As String) As Scripting.Dictionary
     Dim dicOut As New Scripting.Dictionary
     Dim colNodes As New Collection
     Dim colRows As Collection
@@ -636,7 +650,7 @@ Private Function ExplainStudioSql(ByVal strSql As String) As Scripting.Dictionar
         colNodes.Add dicNode
     Next dicRow
     Set dicOut("nodes") = colNodes
-    Set ExplainStudioSql = dicOut
+    Set ExplainAxLiteSql = dicOut
 End Function
 
 Private Function ReadJsonSafeColumn(ByVal ptrStmt As LongPtr, ByVal lngZeroCol As Long) As Variant
@@ -676,7 +690,7 @@ Private Function ReadJsonSafeColumn(ByVal ptrStmt As LongPtr, ByVal lngZeroCol A
 End Function
 
 ' =============================================================================
-' Stored Queries Persistence (_studio_saved_queries)
+' Stored Queries Persistence (_axlite_saved_queries)
 ' =============================================================================
 
 Private Sub EnsureSavedQueriesTable()
@@ -766,10 +780,10 @@ Private Sub SaveStoredQuery( _
 
     strCleanName = Trim$(strName)
     If Len(strCleanName) = 0 Then
-        RaiseSQLiteError sqErrValidation, "clsSQLiteStudioHost.SaveStoredQuery", "Stored query name is required."
+        RaiseSQLiteError sqErrValidation, "clsAxLiteHost.SaveStoredQuery", "Stored query name is required."
     End If
     If Len(Trim$(strSqlText)) = 0 Then
-        RaiseSQLiteError sqErrValidation, "clsSQLiteStudioHost.SaveStoredQuery", "Stored query SQL cannot be empty."
+        RaiseSQLiteError sqErrValidation, "clsAxLiteHost.SaveStoredQuery", "Stored query SQL cannot be empty."
     End If
     strCleanCat = IIf(Len(Trim$(strCategory)) = 0, "General", Trim$(strCategory))
 
@@ -807,7 +821,7 @@ Private Function HandleOpenDatabaseDialog(ByVal strMode As String) As Scripting.
         objDlg.InitialFileName = CurrentProject.Path & "\NewDatabase.db"
     Else
         Set objDlg = Application.FileDialog(MSO_FILE_DIALOG_OPEN)
-        objDlg.Title = "Open SQLite Database"
+        objDlg.Title = "Open SQLite Database in AxLite"
         objDlg.AllowMultiSelect = False
         objDlg.InitialFileName = CurrentProject.Path & "\"
         On Error Resume Next
@@ -835,7 +849,7 @@ Private Function HandleOpenDatabaseDialog(ByVal strMode As String) As Scripting.
     Exit Function
 
 DialogErr:
-    RaiseSQLiteError sqErrInvalidArgument, "clsSQLiteStudioHost.HandleOpenDatabaseDialog", Err.Description
+    RaiseSQLiteError sqErrInvalidArgument, "clsAxLiteHost.HandleOpenDatabaseDialog", Err.Description
 End Function
 
 Private Function HandleDatabaseAction(ByVal dicPayload As Scripting.Dictionary) As Scripting.Dictionary
@@ -901,7 +915,7 @@ Private Function HandleDatabaseAction(ByVal dicPayload As Scripting.Dictionary) 
             dicOut("message") = "Exported CSV to: " & strTarget
 
         Case Else
-            RaiseSQLiteError sqErrInvalidArgument, "clsSQLiteStudioHost.HandleDatabaseAction", _
+            RaiseSQLiteError sqErrInvalidArgument, "clsAxLiteHost.HandleDatabaseAction", _
                 "Unknown database maintenance action: " & strKind
     End Select
 
@@ -939,11 +953,11 @@ Private Function ResolveInitialDbPath(ByVal strCandidate As String) As String
     End If
 End Function
 
-Private Function StudioHtmlFilePath() As String
+Private Function AxLiteHtmlFilePath() As String
     Dim strRoot As String
     strRoot = GetLibraryDirectory()
     If Right$(strRoot, 1) = "\" Then strRoot = Left$(strRoot, Len(strRoot) - 1)
-    StudioHtmlFilePath = strRoot & "\web\studio\index.html"
+    AxLiteHtmlFilePath = strRoot & "\web\axlite\index.html"
 End Function
 
 Private Function ExtractLeafName(ByVal strPath As String) As String
@@ -994,14 +1008,14 @@ Private Function LooksLikeDdlStatement(ByVal strSqlPreview As String) As Boolean
     End If
 End Function
 
-Private Sub RaiseStudioSqliteError(ByVal lngRc As Long, ByVal strSqlContext As String)
+Private Sub RaiseAxLiteSqliteError(ByVal lngRc As Long, ByVal strSqlContext As String)
     Dim lngExt As Long
     Dim strMsg As String
     lngExt = m_Conn.Driver.GetExtendedErrCode(m_Conn.DbHandle)
     strMsg = m_Conn.Driver.GetErrMsg(m_Conn.DbHandle)
     If Len(strMsg) = 0 Then strMsg = "SQLite statement failed."
     RaiseSQLiteError IIf(lngRc = sqConstraint, sqErrConstraint, sqErrSqlFailed), _
-        "clsSQLiteStudioHost", strMsg & " | SQL: " & Left$(Trim$(strSqlContext), 180), lngRc, lngExt
+        "clsAxLiteHost", strMsg & " | SQL: " & Left$(Trim$(strSqlContext), 180), lngRc, lngExt
 End Sub
 
 Private Function MapErrNumberToCode(ByVal lngErrNum As Long) As String
@@ -1024,4 +1038,3 @@ Private Sub EnsureOpenConn()
         OpenTargetDatabase ResolveInitialDbPath(m_CurrentDbPath)
     End If
 End Sub
-

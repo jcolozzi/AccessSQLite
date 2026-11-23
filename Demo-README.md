@@ -1,11 +1,11 @@
-# AccessSQLiteDemo — DAO vs. In-Memory ADO Continuous Forms, Single-Page ORM & Monaco SQLite Studio
+# AccessSQLiteDemo — DAO vs. In-Memory ADO Continuous Forms, Single-Page ORM & AxLite SQL Editor
 
-[`./AccessSQLiteDemo.accdb`](./AccessSQLiteDemo.accdb) is a reference Microsoft Access front-end application that consumes [`./AccessSQLite.accdb`](./AccessSQLite.accdb) as an external **VBA Class Library** (`Tools -> References`) and demonstrates **three distinct form data-binding architectures** plus the Ribbon-launchable **Monaco SQLite Studio** against live SQLite data in [`./AccessSQLiteDemo.db`](./AccessSQLiteDemo.db):
+[`./AccessSQLiteDemo.accdb`](./AccessSQLiteDemo.accdb) is a reference Microsoft Access front-end application that consumes [`./AccessSQLite.accdb`](./AccessSQLite.accdb) as an external **VBA Class Library** (`Tools -> References`) and demonstrates **three distinct form data-binding architectures** plus the Ribbon-launchable **`AxLite`** SQL editor against live SQLite data in [`./AccessSQLiteDemo.db`](./AccessSQLiteDemo.db):
 
 1. **Continuous Form Approach A — DAO Staging Table (`frmTaskList` + `tblTaskBuffer`):** Classic local DAO viewport table synced from SQLite with inline ORM writeback.
 2. **Continuous Form Approach B — Disconnected In-Memory `ADODB.Recordset` (`frmTaskListAdo`):** Zero local staging tables (`RecordSource = ""`), zero `.accdb` front-end bloat, per-row virtual client-only `[IsSelected]` checkboxes in RAM, batch actions, and inline ORM writeback via `SaveFromAdoRow`.
 3. **Single-Page Form (`frmTaskDetail` + `clsTaskItem`):** 100% unbound controls mapped directly to a strongly-typed `ISQLiteEntity` class.
-4. **Monaco SQLite Studio (`AccessSQLite` Ribbon Tab -> `SQLite Studio`):** Full SQLite workbench inside Access's Edge Browser Control (`ctlWebHost`) with table/column/index/view browsing, stored queries, and execution of any SQL operation.
+4. **AxLite SQL Editor (`AccessSQLite` Ribbon Tab -> `AxLite Editor`):** Full Monaco-powered SQLite workbench inside Access's Edge Browser Control (`ctlWebHost`) with table/column/index/view browsing, stored queries, and execution of any SQL operation.
 
 For full API reference documentation on the underlying class library and ORM, see [`./README.md`](./README.md).
 
@@ -180,20 +180,20 @@ While a local DAO buffer table (`tblTaskBuffer`) is simple and supports Jet-spec
 
 ---
 
-## 5c. CustomUI Ribbon & Monaco SQLite Studio (`modDemoRibbon`)
+## 5c. CustomUI Ribbon & AxLite SQL Editor (`modDemoRibbon`)
 
 Opening `AccessSQLiteDemo.accdb` loads the **`AccessSQLite`** CustomUI Ribbon tab (`USysRibbons` row `AccessSQLiteDemo`), giving one-click access to:
 
-- **SQLite Studio (Monaco):**
-  - **`SQLite Studio`** — Opens `AccessSQLite.OpenSQLiteStudio` connected directly to `AccessSQLiteDemo.db` inside Access's Edge Browser Control with Monaco `0.52.2` SQL IntelliSense, table/column/index/view tree, stored queries (`_access_saved_queries`), `EXPLAIN QUERY PLAN`, and CSV/JSON export.
-  - **`Open .db File...`** — Opens any `.db` / `.sqlite` / `.sqlite3` file on disk in a new Studio window.
-  - **`In-Memory DB`** — Opens an isolated `:memory:` SQLite scratchpad in Studio.
+- **AxLite SQL Editor (Monaco):**
+  - **`AxLite Editor`** — Opens `AccessSQLite.OpenAxLite` connected directly to `AccessSQLiteDemo.db` inside Access's Edge Browser Control with Monaco `0.52.2` SQL IntelliSense, table/column/index/view tree, stored queries (`_axlite_saved_queries`), `EXPLAIN QUERY PLAN`, and CSV/JSON export.
+  - **`Open .db File...`** — Opens any `.db` / `.sqlite` / `.sqlite3` file on disk in a new `AxLite` window.
+  - **`In-Memory DB`** — Opens an isolated `:memory:` SQLite scratchpad in `AxLite`.
 - **Access Form Approaches:**
   - **`Tasks (ADO In-Memory)`** -> `frmTaskListAdo`
   - **`Tasks (DAO Buffer)`** -> `frmTaskList`
   - **`Task Detail (ORM)`** -> `frmTaskDetail`
 - **Verification:**
-  - **`Verify All Forms`** -> Executes `RunDemoFormsVerification()` across DAO Continuous, In-Memory ADO Continuous, Single-Page ORM, and Monaco Studio.
+  - **`Verify All Forms`** -> Executes `RunDemoFormsVerification()` across DAO Continuous, In-Memory ADO Continuous, Single-Page ORM, and `AxLite`.
 
 ---
 
@@ -257,7 +257,7 @@ Both forms can stay open at the same time in Access's tabbed document interface 
 | **Class Module** | `clsTaskItem` | Domain entity implementing `AccessSQLite.ISQLiteEntity` for the `Tasks` table. |
 | **Standard Module** | `modDemoDataService` | Manages `clsSQLiteConnection`, runs `clsSQLiteMigrator` v1, defines `clsSQLiteTableMap`, builds both DAO buffer sync and in-memory ADO recordsets, and coordinates form refresh notifications. |
 | **Standard Module** | `modDemoRibbon` | CustomUI Ribbon callbacks (`DemoRibbonLoad`, `DemoRibbonAction`) and `InstallDemoRibbon()` (`USysRibbons` row `AccessSQLiteDemo`). |
-| **Standard Module** | `modDemoTests` | Contains `RunDemoFormsVerification()` for automated end-to-end testing of DAO Continuous, In-Memory ADO Continuous, Single-Page ORM, and cross-library Monaco SQLite Studio. |
+| **Standard Module** | `modDemoTests` | Contains `RunDemoFormsVerification()` for automated end-to-end testing of DAO Continuous, In-Memory ADO Continuous, Single-Page ORM, and cross-library `AxLite`. |
 | **Table** | `USysRibbons` | Stores the `AccessSQLiteDemo` Office CustomUI XML (`CustomRibbonID = "AccessSQLiteDemo"`). |
 | **Table** | `tblTaskBuffer` | Local UI viewport table populated from `AccessSQLiteDemo.db` for `frmTaskList` (DAO approach). |
 | **Table** | `tblDual` | Single-row helper table enabling SQL-based test/diagnostic execution. |
@@ -287,8 +287,8 @@ You can run the automated UI + SQLite integration check at any time from the VBA
 ? RunDemoFormsVerification()
 ```
 
-`RunDemoFormsVerification()` verifies `USysRibbons` (`AccessSQLiteDemo`), opens `frmTaskList` (DAO staging table) and `frmTaskListAdo` (disconnected in-memory `ADODB.Recordset` with `RecordSource = ""`), tests category filtering and 0-row search/reset handling across both Continuous Form approaches, opens `frmTaskDetail` in `"NEW"` mode, inserts a task via `clsTaskItem` + `SaveEntity`, verifies **both** Continuous Forms auto-refresh, checks virtual `[IsSelected]` checkboxes + `BatchCompleteSelectedRows()` + `SaveFromAdoRow` inline writeback, verifies cross-library `OpenSQLiteStudio` launch, cleans up its temporary row, and returns:
+`RunDemoFormsVerification()` verifies `USysRibbons` (`AccessSQLiteDemo`), opens `frmTaskList` (DAO staging table) and `frmTaskListAdo` (disconnected in-memory `ADODB.Recordset` with `RecordSource = ""`), tests category filtering and 0-row search/reset handling across both Continuous Form approaches, opens `frmTaskDetail` in `"NEW"` mode, inserts a task via `clsTaskItem` + `SaveEntity`, verifies **both** Continuous Forms auto-refresh, checks virtual `[IsSelected]` checkboxes + `BatchCompleteSelectedRows()` + `SaveFromAdoRow` inline writeback, verifies cross-library `OpenAxLite` launch, cleans up its temporary row, and returns:
 
 ```text
-PASS | DAO=11 | ADO=11 | Studio=studio_1 | RoundTripID=...
+PASS | DAO=11 | ADO=11 | AxLite=axlite_1 | RoundTripID=...
 ```

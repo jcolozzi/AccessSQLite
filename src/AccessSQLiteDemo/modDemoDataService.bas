@@ -8,7 +8,7 @@ Option Explicit
 '   1. frmTaskList    - Continuous Form backed by DAO staging table (tblTaskBuffer)
 '   2. frmTaskListAdo - Continuous Form backed by In-Memory ADODB.Recordset (zero temp table)
 '   3. frmTaskDetail  - Unbound Single-Page Form backed by clsTaskItem (ISQLiteEntity)
-'   4. SQLite Studio  - Monaco SQL front-end client hosted in AccessSQLite.accdb
+'   4. AxLite         - Monaco SQL front-end client hosted in AccessSQLite.accdb
 ' =============================================================================
 
 Private m_SqliteConn As AccessSQLite.clsSQLiteConnection

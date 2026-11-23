@@ -1,17 +1,17 @@
 // @ts-check
 /**
- * AccessSQLite Studio — Monaco-powered SQLite Front-End Client for Microsoft Access
+ * AxLite — Monaco-powered SQLite Front-End Client for Microsoft Access
  * Features:
  *   - Multi-tab Monaco SQL editor with live SQLite schema IntelliSense
  *   - Schema Explorer (Tables, Columns w/ PK/FK/NOT NULL/Type badges, Indexes, Views, Triggers)
- *   - Stored Queries manager (persisted in _studio_saved_queries)
+ *   - Stored Queries manager (persisted in _axlite_saved_queries)
  *   - Executes all SQL operations (SELECT, DML, DDL, PRAGMA, RETURNING, transactions, multi-statement scripts)
  *   - Sortable Results Grid, Execution Messages, Explain Query Plan, CSV/JSON Export & Query History
  */
-(function (Studio) {
+(function (AxLite) {
     'use strict';
 
-    const bridge = Studio.bridge;
+    const bridge = AxLite.bridge;
 
     const SQLITE_KEYWORDS_AND_FUNCS = [
         'PRAGMA journal_mode;', 'PRAGMA foreign_keys;', 'PRAGMA table_xinfo(', 'PRAGMA index_list(',
@@ -82,7 +82,7 @@
         target.replaceChildren(...clean);
     }
 
-    class SQLiteStudioApp {
+    class AxLiteApp {
         #monaco;
         #editor;
         #root;
@@ -332,8 +332,8 @@
         async connectInitial() {
             this.#renderAll();
             try {
-                const initData = await bridge.call('studio.init');
-                this.#applyStudioState(initData);
+                const initData = await bridge.call('axlite.init');
+                this.#applyHostState(initData);
                 this.#logMessage('ok', `Connected to ${this.#dbInfo.dbPath || ':memory:'} (${this.#dbInfo.driverTitle} v${this.#dbInfo.engineVersion})`);
                 if (this.#schema.tables.length > 0 && this.#tabs.length === 1) {
                     const preferred = this.#schema.tables.find((t) => !String(t.name).startsWith('_')) || this.#schema.tables[0];
@@ -357,7 +357,7 @@
             }
         }
 
-        #applyStudioState(data) {
+        #applyHostState(data) {
             if (!data) return;
             if (data.dbPath !== undefined) this.#dbInfo.dbPath = data.dbPath;
             if (data.dbName !== undefined) this.#dbInfo.dbName = data.dbName;
@@ -373,8 +373,8 @@
 
         async refreshSchema() {
             try {
-                const res = await bridge.call('studio.init');
-                this.#applyStudioState(res);
+                const res = await bridge.call('axlite.init');
+                this.#applyHostState(res);
                 this.#renderAll();
             } catch (err) {
                 this.#logMessage('err', `Schema refresh failed: ${err.message}`);
@@ -385,11 +385,11 @@
 
         async openDatabaseDialog(mode) {
             try {
-                const res = await bridge.call('studio.openDialog', { mode });
+                const res = await bridge.call('axlite.openDialog', { mode });
                 if (res && !res.cancelled) {
                     this.#expandedNodes.clear();
                     this.#lastResult = null;
-                    this.#applyStudioState(res);
+                    this.#applyHostState(res);
                     if (this.#schema.tables.length > 0) {
                         this.#expandedNodes.add(`tbl:${this.#schema.tables[0].name}`);
                     }
@@ -405,10 +405,10 @@
 
         async openInMemoryDb() {
             try {
-                const res = await bridge.call('studio.openPath', { dbPath: ':memory:' });
+                const res = await bridge.call('axlite.openPath', { dbPath: ':memory:' });
                 this.#expandedNodes.clear();
                 this.#lastResult = null;
-                this.#applyStudioState(res);
+                this.#applyHostState(res);
                 this.#logMessage('ok', 'Switched to isolated :memory: SQLite database.');
                 this.#renderAll();
             } catch (err) {
@@ -447,7 +447,7 @@
 
             const startedAt = new Date().toLocaleTimeString();
             try {
-                const res = await bridge.call('studio.execSql', {
+                const res = await bridge.call('axlite.execSql', {
                     sql,
                     rowLimit: this.#rowLimit
                 });
@@ -486,8 +486,8 @@
                 }
 
                 if (res.schemaChanged) {
-                    const refreshed = await bridge.call('studio.init');
-                    this.#applyStudioState(refreshed);
+                    const refreshed = await bridge.call('axlite.init');
+                    this.#applyHostState(refreshed);
                 }
             } catch (err) {
                 this.#history.unshift({
@@ -510,7 +510,7 @@
             const sql = this.#getSqlToExecute();
             if (!sql || this.#busy) return;
             try {
-                const res = await bridge.call('studio.explainSql', { sql });
+                const res = await bridge.call('axlite.explainSql', { sql });
                 this.#planNodes = res.nodes || [];
                 this.#activeBottomTab = 'plan';
                 this.#renderResultsPane();
@@ -524,7 +524,7 @@
         async runDbMaintenance(kind) {
             if (!kind || this.#busy) return;
             try {
-                const res = await bridge.call('studio.dbAction', { kind });
+                const res = await bridge.call('axlite.dbAction', { kind });
                 if (res && !res.cancelled) {
                     if (res.fileSizeBytes !== undefined) this.#dbInfo.fileSizeBytes = res.fileSizeBytes;
                     this.#logMessage(res.ok === false ? 'err' : 'ok', res.message || `${kind} completed.`);
@@ -553,7 +553,7 @@
             }
             const csvText = lines.join('\r\n');
             try {
-                const res = await bridge.call('studio.dbAction', {
+                const res = await bridge.call('axlite.dbAction', {
                     kind: 'export_csv',
                     csvText,
                     suggestedName: `${(this.activeTab?.title || 'query_results').replace(/[^A-Za-z0-9_-]/g, '_')}.csv`
@@ -699,7 +699,7 @@
                 const sqlText = tab.model.getValue().trim();
                 if (!sqlText) return;
                 try {
-                    const res = await bridge.call('studio.saveQuery', {
+                    const res = await bridge.call('axlite.saveQuery', {
                         name: qName,
                         category: catIn.value.trim() || 'General',
                         description: descIn.value.trim(),
@@ -741,7 +741,7 @@
         async deleteSavedQuery(qName, ev) {
             if (ev) ev.stopPropagation();
             try {
-                const res = await bridge.call('studio.deleteQuery', { name: qName });
+                const res = await bridge.call('axlite.deleteQuery', { name: qName });
                 this.#savedQueries = res.savedQueries || [];
                 this.#logMessage('ok', `Deleted stored query "${qName}".`);
                 this.#renderTree();
@@ -816,7 +816,7 @@
             this.#topbarEl.replaceChildren(
                 el('div', { class: 'ss-brand' },
                     el('span', { class: 'ss-brand-dot' }),
-                    'SQLite Studio'
+                    'AxLite'
                 ),
                 el('div', { class: 'ss-db-pill', title: this.#dbInfo.dbPath || ':memory:' },
                     this.#dbInfo.dbName || '(No DB)'
@@ -1292,13 +1292,13 @@
         const root = document.getElementById('ss-app');
         try {
             const monaco = await loadMonaco();
-            Studio.app = new SQLiteStudioApp(root, monaco);
+            AxLite.app = new AxLiteApp(root, monaco);
         } catch (err) {
             root.replaceChildren(el('div', { class: 'ss-msg-list' },
-                el('div', { class: 'ss-msg-card err' }, `Failed to initialize Monaco SQLite Studio: ${err.message || err}`)
+                el('div', { class: 'ss-msg-card err' }, `Failed to initialize AxLite: ${err.message || err}`)
             ));
         }
     }
 
     boot();
-})(window.SQLiteStudio = window.SQLiteStudio || {});
+})(window.AxLite = window.AxLite || {});

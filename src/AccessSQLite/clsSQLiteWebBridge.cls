@@ -11,15 +11,15 @@ Option Explicit
 
 ' =============================================================================
 ' clsSQLiteWebBridge
-' Access Edge Browser Control <-> JavaScript JSON bridge for AccessSQLite Studio.
+' Access Edge Browser Control <-> JavaScript JSON bridge for AxLite.
 ' Adapted from Access Designer's clsAasWebBridge:
-'   - Polls window.SQLiteStudio.bridge.peek() via RetrieveJavascriptValue (no '?' in script!)
+'   - Polls window.AxLite.bridge.peek() via RetrieveJavascriptValue (no '?' in script!)
 '   - Acknowledges processed sequence numbers via ExecuteJavascript
 '   - Splits replies > 32,000 chars into receivePart(...) chunks so oversized payloads never drop
 ' =============================================================================
 
 Private Const HOST_PREFIX As String = "https://msaccess/"
-Private Const PEEK_SCRIPT As String = "(window.SQLiteStudio && window.SQLiteStudio.bridge && window.SQLiteStudio.bridge.peek()) || ''"
+Private Const PEEK_SCRIPT As String = "(window.AxLite && window.AxLite.bridge && window.AxLite.bridge.peek()) || ''"
 Private Const TIMEOUT_TEXT As String = "RetrieveJavascriptValue timed out*"
 Private Const CHUNK_CHARS As Long = 32000
 
@@ -80,7 +80,7 @@ Public Function PollOutbox() As Collection
 
     udtParsed = LibJSON.Parse(PercentDecodeToUtf8(strRaw), jpCodeUTF8)
     If Not udtParsed.IsValid Then
-        ExecuteJs "SQLiteStudio.bridge.ack(Number.MAX_SAFE_INTEGER);"
+        ExecuteJs "AxLite.bridge.ack(Number.MAX_SAFE_INTEGER);"
         Exit Function
     End If
     If Not IsObject(udtParsed.Value) Then Exit Function
@@ -98,7 +98,7 @@ Public Function PollOutbox() As Collection
 End Function
 
 Public Sub AckOutbox()
-    ExecuteJs "SQLiteStudio.bridge.ack(" & m_dblLastSeq & ");"
+    ExecuteJs "AxLite.bridge.ack(" & m_dblLastSeq & ");"
 End Sub
 
 Public Sub SendReply(ByVal dicReply As Scripting.Dictionary)
@@ -118,7 +118,7 @@ Private Sub SendJsonString(ByVal strJson As String)
     Dim strKey As String
 
     If Len(strJson) <= CHUNK_CHARS Then
-        ExecuteJs "SQLiteStudio.bridge.receive(" & strJson & ");"
+        ExecuteJs "AxLite.bridge.receive(" & strJson & ");"
         Exit Sub
     End If
 
@@ -126,7 +126,7 @@ Private Sub SendJsonString(ByVal strJson As String)
     strKey = CStr(m_lngChunkKey)
     lngParts = (Len(strJson) + CHUNK_CHARS - 1) \ CHUNK_CHARS
     For lngPart = 0 To lngParts - 1
-        ExecuteJs "SQLiteStudio.bridge.receivePart(" & strKey & "," & lngPart & "," & lngParts & "," & _
+        ExecuteJs "AxLite.bridge.receivePart(" & strKey & "," & lngPart & "," & lngParts & "," & _
             LibJSON.Serialize(Mid$(strJson, lngPart * CHUNK_CHARS + 1, CHUNK_CHARS)) & ");"
     Next lngPart
 End Sub

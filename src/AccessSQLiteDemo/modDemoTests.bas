@@ -134,13 +134,13 @@ Public Function RunDemoFormsVerification() As String
         Err.Raise vbObjectError + 3005, "modDemoTests", "Single-page form did not read ADO inline + batch SQLite updates."
     End If
 
-    strStep = "6-CrossLibraryStudioCheck"
-    Dim strStudioKey As String
-    strStudioKey = AccessSQLite.OpenSQLiteStudio(DemoSqliteFilePath())
-    If Len(strStudioKey) = 0 Or AccessSQLite.OpenSQLiteStudioCount() < 1 Then
-        Err.Raise vbObjectError + 3014, "modDemoTests", "OpenSQLiteStudio cross-library window failed to open."
+    strStep = "6-CrossLibraryAxLiteCheck"
+    Dim strAxKey As String
+    strAxKey = AccessSQLite.OpenAxLite(DemoSqliteFilePath())
+    If Len(strAxKey) = 0 Or AccessSQLite.OpenAxLiteCount() < 1 Then
+        Err.Raise vbObjectError + 3014, "modDemoTests", "OpenAxLite cross-library window failed to open."
     End If
-    AccessSQLite.CloseAllSQLiteStudios
+    AccessSQLite.CloseAllAxLiteWindows
 
     strStep = "7-Cleanup"
     DoCmd.Close acForm, "frmTaskDetail", acSaveNo
@@ -150,7 +150,7 @@ Public Function RunDemoFormsVerification() As String
     DoCmd.Close acForm, "frmTaskListAdo", acSaveNo
     DoCmd.Close acForm, "frmTaskList", acSaveNo
 
-    RunDemoFormsVerification = "PASS | DAO=" & lngInitialSqliteCnt & " | ADO=" & lngInitialSqliteCnt & " | Studio=" & strStudioKey & " | RoundTripID=" & lngNewId
+    RunDemoFormsVerification = "PASS | DAO=" & lngInitialSqliteCnt & " | ADO=" & lngInitialSqliteCnt & " | AxLite=" & strAxKey & " | RoundTripID=" & lngNewId
     Exit Function
 
 TestErr:

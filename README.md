@@ -1,6 +1,6 @@
 # AccessSQLite — VBA Class Library & ORM for Microsoft Access
 
-`AccessSQLite` is a self-contained, 32-bit and 64-bit Microsoft Access VBA class library, lightweight Object-Relational Mapper (ORM), disconnected **ADO in-memory recordset** bridge, and **Monaco Editor SQLite front-end client** (`AccessSQLite Studio`) for SQLite 3. It supports zero-deployment execution via Windows' built-in `winsqlite3.dll` as well as a portable bundled `sqlite3.dll` fallback, automatic SMB/UNC vs. local-disk pragma profiles, prepared statement caching, fluent query building, dual-mode `Dictionary` and strongly-typed `ISQLiteEntity` repositories, zero-temp-table Continuous Forms via disconnected `ADODB.Recordset`s, schema migrations, bidirectional Access DAO & ADO data transfer, and a Ribbon-launchable SQL workbench.
+`AccessSQLite` is a self-contained, 32-bit and 64-bit Microsoft Access VBA class library, lightweight Object-Relational Mapper (ORM), disconnected **ADO in-memory recordset** bridge, and **Monaco Editor SQLite front-end client** (**`AxLite`**) for SQLite 3. It supports zero-deployment execution via Windows' built-in `winsqlite3.dll` as well as a portable bundled `sqlite3.dll` fallback, automatic SMB/UNC vs. local-disk pragma profiles, prepared statement caching, fluent query building, dual-mode `Dictionary` and strongly-typed `ISQLiteEntity` repositories, zero-temp-table Continuous Forms via disconnected `ADODB.Recordset`s, schema migrations, bidirectional Access DAO & ADO data transfer, and a Ribbon-launchable SQL workbench.
 
 ---
 
@@ -19,7 +19,7 @@
 11. [Versioned Schema Migrations (`clsSQLiteMigrator`)](#11-versioned-schema-migrations-clssqlitemigrator)
 12. [Access DAO <-> SQLite Bridge (`clsSQLiteAccessBridge`)](#12-access-dao---sqlite-bridge-clssqliteaccessbridge)
 13. [In-Memory ADO Recordsets for Continuous Forms (`clsSQLiteAdoBridge`)](#13-in-memory-ado-recordsets-for-continuous-forms-clssqliteadobridge)
-14. [AccessSQLite Studio — Monaco SQL Front-End Client & Ribbon](#14-accesssqlite-studio--monaco-sql-front-end-client--ribbon)
+14. [AxLite — Monaco SQL Front-End Client & Ribbon](#14-axlite--monaco-sql-front-end-client--ribbon)
 15. [Data Type Marshaling & Edge-Case Guarantees](#15-data-type-marshaling--edge-case-guarantees)
 16. [Error Handling & Diagnostics](#16-error-handling--diagnostics)
 17. [Developer Internals, Testing & Contribution Notes](#17-developer-internals-testing--contribution-notes)
@@ -31,10 +31,10 @@
 
 | File / Folder | Purpose |
 |---|---|
-| [`./AccessSQLite.accdb`](./AccessSQLite.accdb) | Host Access class-library database (VBA Project Name: `AccessSQLite`; public classes set `Attribute VB_Exposed = True`; hosts `frmSQLiteStudio` and `SQLiteStudio` Ribbon) |
+| [`./AccessSQLite.accdb`](./AccessSQLite.accdb) | Host Access class-library database (VBA Project Name: `AccessSQLite`; public classes set `Attribute VB_Exposed = True`; hosts `frmAxLite` and `AxLite` Ribbon) |
 | [`./src/AccessSQLite/`](./src/AccessSQLite) | Exported VBA source modules (25 `.bas` and `.cls` modules) from `AccessSQLite.accdb` |
 | [`./src/AccessSQLiteDemo/`](./src/AccessSQLiteDemo) | Exported VBA source & form code-behind modules (7 `.bas` and `.cls` modules) from `AccessSQLiteDemo.accdb` |
-| [`./web/studio/`](./web/studio) | `AccessSQLite Studio` web frontend (`index.html`, `studio.css`, `bridge.js`, `studio.js`) loaded inside Access's Edge Browser Control (`https://msaccess/`) |
+| [`./web/axlite/`](./web/axlite) | `AxLite` web frontend (`index.html`, `axlite.css`, `bridge.js`, `axlite.js`) loaded inside Access's Edge Browser Control (`https://msaccess/`) |
 | [`./web/vendor/monaco/`](./web/vendor/monaco) | Bundled local `monaco-editor` (`0.52.2` minified AMD build) — runs 100% offline with SQL syntax highlighting & schema IntelliSense |
 | [`./lib/sqlite3.dll`](./lib/sqlite3.dll) | Bundled **32-bit (`x86`)** SQLite `3.45.3` engine used by `clsSQLiteBundledDriver` under 32-bit Microsoft Access |
 | [`./lib/SQLite3_StdCall.dll`](./lib/SQLite3_StdCall.dll) | Bundled **32-bit (`x86`)** `__stdcall` thunk wrapper used alongside 32-bit `lib\sqlite3.dll` |
@@ -42,7 +42,7 @@
 | [`./AccessSQLite_Test.db`](./AccessSQLite_Test.db) | Sample/test SQLite database configured with SMB-safe `journal_mode = DELETE` |
 | [`./AccessSQLiteDemo.accdb`](./AccessSQLiteDemo.accdb) | Reference demo application showcasing **both** a DAO Staging Continuous Form (`frmTaskList`) and an In-Memory ADO Continuous Form (`frmTaskListAdo`), an unbound ORM Single-Page Form (`frmTaskDetail`), and the `AccessSQLite` CustomUI Ribbon |
 | [`./AccessSQLiteDemo.db`](./AccessSQLiteDemo.db) | Live SQLite database backing `AccessSQLiteDemo.accdb` (migrated and seeded via `clsSQLiteMigrator` + `clsSQLiteRepository`) |
-| [`./Demo-README.md`](./Demo-README.md) | Architectural walkthrough comparing DAO staging tables vs. In-Memory ADO recordsets vs. Unbound ORM forms + Monaco SQLite Studio |
+| [`./Demo-README.md`](./Demo-README.md) | Architectural walkthrough comparing DAO staging tables vs. In-Memory ADO recordsets vs. Unbound ORM forms + AxLite SQL Editor |
 | [`./README.md`](./README.md) | Developer and usage documentation |
 
 ---
@@ -656,33 +656,33 @@ adoBridge.ImportAdoRecordsetToSQLite rsExternal, "ImportedRows", blnOverwriteTab
 
 ---
 
-## 14. AccessSQLite Studio — Monaco SQL Front-End Client & Ribbon
+## 14. AxLite — Monaco SQL Front-End Client & Ribbon
 
-`AccessSQLite` includes a built-in, Ribbon-launchable SQLite front-end workbench (**`AccessSQLite Studio`**) hosted inside Access's native Edge Browser Control (`ctlWebHost`, `https://msaccess/` virtual origin) and powered offline by **Monaco Editor `0.52.2`**.
+`AccessSQLite` includes a built-in, Ribbon-launchable SQLite front-end workbench (**`AxLite`**) hosted inside Access's native Edge Browser Control (`ctlWebHost`, `https://msaccess/` virtual origin) and powered offline by **Monaco Editor `0.52.2`**.
 
-### Key Studio Capabilities
+### Key AxLite Capabilities
 - **Schema Explorer:** Browse all **Tables** (columns, `PK` / `FK` / `NN` / `STRICT` badges, row counts, indexes), **Views**, and **Triggers**. Click any column to insert its quoted identifier at the cursor, or click **`Rows`**, **`Ins`**, or **`DDL`** to inspect data or generate SQL templates in a new tab.
-- **Stored Queries (`_access_saved_queries`):** Save reusable SQL scripts with category and description metadata (**Ctrl+S** or **Save Query**), filter them in the sidebar, and open or execute them in one click.
+- **Stored Queries (`_axlite_saved_queries`):** Save reusable SQL scripts with category and description metadata (**Ctrl+S** or **Save Query**), filter them in the sidebar, and open or execute them in one click.
 - **Monaco SQL Workbench:** Multi-tab SQL editor with live schema-aware IntelliSense (tables, views, columns, `PRAGMA`s, and built-in SQLite functions), **Ctrl+Enter / F5** execution (executes highlighted selection or full active tab), dark/light theme toggle, and persistent transaction indicator (`BEGIN` / `COMMIT` / `ROLLBACK`).
 - **Results, Messages, Query Plan & History:** Sortable data grid with `NULL` badges and row-limit selector (`200` / `1000` / `5000` / `All`), **Export CSV...**, **Copy JSON**, **`EXPLAIN QUERY PLAN`** tree viewer, and clickable session execution history.
 - **Database Switching & Maintenance:** Switch live between any `.db` / `.sqlite` file on disk (**Open DB...** / **New DB...**) or an isolated **`:memory:`** scratchpad, and run **`PRAGMA integrity_check`**, **`VACUUM`**, or online **`BackupToFile`**.
 
-### Launching SQLite Studio from Ribbon or VBA
+### Launching AxLite from Ribbon or VBA
 
-In `AccessSQLite.accdb`, open the **`SQLite Studio`** Ribbon tab (or in `AccessSQLiteDemo.accdb`, open the **`AccessSQLite`** Ribbon tab) and click **SQLite Studio**. You can also launch Studio windows programmatically from any referencing front-end `.accdb`:
+In `AccessSQLite.accdb`, open the **`AxLite`** Ribbon tab (or in `AccessSQLiteDemo.accdb`, open the **`AccessSQLite`** Ribbon tab) and click **AxLite Editor**. You can also launch `AxLite` windows programmatically from any referencing front-end `.accdb`:
 
 ```vba
-' Open Studio connected to a specific SQLite file (multiple Studio windows can be open at once):
-AccessSQLite.OpenSQLiteStudio CurrentProject.Path & "\AppData.db"
+' Open AxLite connected to a specific SQLite file (multiple AxLite windows can be open at once):
+AccessSQLite.OpenAxLite CurrentProject.Path & "\AppData.db"
 
 ' Prompt user with native FileDialog to pick a .db / .sqlite / .sqlite3 file:
-AccessSQLite.OpenSQLiteStudioPicker
+AccessSQLite.OpenAxLitePicker
 
 ' Open an isolated in-memory (:memory:) SQLite scratchpad:
-AccessSQLite.OpenSQLiteStudioMemory
+AccessSQLite.OpenAxLiteMemory
 
-' Close all open Studio windows:
-AccessSQLite.CloseAllSQLiteStudios
+' Close all open AxLite windows:
+AccessSQLite.CloseAllAxLiteWindows
 ```
 
 ---
@@ -748,7 +748,7 @@ PASS | Assertions=97 | Failed=0 | Elapsed=... ms
 6. `UpsertRecord`, `sqErrValidation`, `clsDemoTask` entity CRUD, skipped no-op dirty updates, soft deletes + `OnlyTrashed` + `RestoreRecord`, 2-query eager `IncludeHasMany`, `clsSQLiteUnitOfWork` rollback/commit, and reserved-word sanitization in `modSQLiteEntityGen`
 7. Multi-step `clsSQLiteMigrator` up/down rollbacks, `clsSQLiteAccessBridge` DAO <-> SQLite round-trips (including `Null` binding reset, `400`-char Memo fields, and `0`-row table creation), and online `BackupToFile`
 8. `clsSQLiteAdoBridge` disconnected client-side `ADODB.Recordset` hydration (`QueryAdoRecordset`, `ToAdoRecordset`), virtual `[IsSelected]` checkboxes (`GetSelectedKeys` / `SetAllSelected`), two-way `SaveFromAdoRow` insert & dirty update, and `ImportAdoRecordsetToSQLite`
-9. Headless `clsSQLiteStudioHost` JSON protocol verification (`studio.init`, `studio.saveQuery`, `studio.exec`, `studio.explain`, `studio.deleteQuery`, and `PRAGMA integrity_check`)
+9. Headless `clsAxLiteHost` JSON protocol verification (`axlite.init`, `axlite.saveQuery`, `axlite.execSql`, `axlite.explainSql`, `axlite.deleteQuery`, and `PRAGMA integrity_check`)
 
 ### Coding & Naming Conventions
 
@@ -775,9 +775,9 @@ When extending `AccessSQLite`:
 - **[`b-gonzalez/SQLiteForExcel`](https://github.com/b-gonzalez/SQLiteForExcel) — Brian Gonzalez** *(MIT License)*
   - Refactored `SQLiteForExcel` into class/interface modules (`ISqlite3` / `cSqlite3`) using unified `LongPtr` signatures across 32-bit and 64-bit VBA7, informing `ISQLiteDriver`.
 - **[`cristianbuse/VBA-FastJSON`](https://github.com/cristianbuse/VBA-FastJSON) — Cristian Buse** *(MIT License)*
-  - Fast, pure-VBA JSON parser and serializer (`LibJSON.bas`) used by `clsSQLiteWebBridge` and `clsSQLiteStudioHost` for JSON RPC marshaling between VBA and Monaco Studio.
+  - Fast, pure-VBA JSON parser and serializer (`LibJSON.bas`) used by `clsSQLiteWebBridge` and `clsAxLiteHost` for JSON RPC marshaling between VBA and `AxLite`.
 - **[`microsoft/monaco-editor`](https://github.com/microsoft/monaco-editor) — Microsoft Corporation** *(MIT License)*
-  - Browser-based code editor (`0.52.2` AMD build in `web/vendor/monaco/`) powering `AccessSQLite Studio` inside Access's Edge Browser Control (`https://msaccess/`).
+  - Browser-based code editor (`0.52.2` AMD build in `web/vendor/monaco/`) powering `AxLite` inside Access's Edge Browser Control (`https://msaccess/`).
 
 ### Third-Party License Notice (`SQLiteForExcel` / `SQLite3_StdCall.dll`)
 

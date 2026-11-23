@@ -3,12 +3,12 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>AccessSQLite Studio</title>
-    <link rel="stylesheet" href="studio.css">
+    <title>AxLite — SQLite Editor for Access</title>
+    <link rel="stylesheet" href="axlite.css">
 </head>
 <body>
     <div id="ss-app" class="ss-shell">
-        <div class="ss-empty">Loading AccessSQLite Studio &amp; Monaco Editor...</div>
+        <div class="ss-empty">Loading AxLite &amp; Monaco Editor...</div>
     </div>
 
     <!-- Save Stored Query Modal -->
@@ -34,9 +34,9 @@
         </div>
     </div>
 
-    <!-- Load bridge first so VBA polling connects immediately; Monaco AMD loader comes before studio.js -->
+    <!-- Load bridge first so VBA polling connects immediately; Monaco AMD loader comes before axlite.js -->
     <script src="bridge.js"></script>
     <script src="../vendor/monaco/vs/loader.js"></script>
-    <script src="studio.js"></script>
+    <script src="axlite.js"></script>
 </body>
 </html>

@@ -215,9 +215,9 @@ Private Sub cmdReloadSqlite_Click()
     RefreshFromSQLite CurrentSelectedTaskId()
 End Sub
 
-Private Sub cmdOpenStudio_Click()
+Private Sub cmdOpenAxLite_Click()
     CommitPendingEditQuiet
-    AccessSQLite.OpenSQLiteStudio DemoSqliteFilePath()
+    AccessSQLite.OpenAxLite DemoSqliteFilePath()
 End Sub
 
 ' Returns a Collection of checked TaskIDs from the virtual in-memory [IsSelected] column.

@@ -1,12 +1,12 @@
 // @ts-check
 /**
- * AccessSQLite Studio — JS <-> Access Edge Browser Control Bridge
+ * AxLite — JS <-> Access Edge Browser Control Bridge
  * Adapted from Access Designer's proven OutboxTransport + chunked receivePart pattern:
- *   - JS queues envelopes in OutboxTransport; VBA polls SQLiteStudio.bridge.peek() via RetrieveJavascriptValue
- *   - VBA acks processed sequence numbers via ExecuteJavascript("SQLiteStudio.bridge.ack(seq)")
- *   - VBA sends responses via ExecuteJavascript("SQLiteStudio.bridge.receive(...)") or chunked receivePart(...)
+ *   - JS queues envelopes in OutboxTransport; VBA polls AxLite.bridge.peek() via RetrieveJavascriptValue
+ *   - VBA acks processed sequence numbers via ExecuteJavascript("AxLite.bridge.ack(seq)")
+ *   - VBA sends responses via ExecuteJavascript("AxLite.bridge.receive(...)") or chunked receivePart(...)
  */
-(function (Studio) {
+(function (AxLite) {
     'use strict';
 
     class BridgeError extends Error {
@@ -141,13 +141,13 @@
             e.stopImmediatePropagation();
             return;
         }
-        if (!Studio.app) {
+        if (!AxLite.app) {
             const root = document.getElementById('ss-app');
             if (root) root.textContent = `Boot Error: ${e.message} (${e.filename || ''}:${e.lineno || 0})`;
         }
     });
     window.addEventListener('unhandledrejection', (e) => {
-        if (!Studio.app) {
+        if (!AxLite.app) {
             const root = document.getElementById('ss-app');
             if (root) root.textContent = `Unhandled Boot Promise: ${e.reason?.message || e.reason}`;
         }
@@ -157,7 +157,7 @@
     const transport = new OutboxTransport();
     const bridge = new Bridge(transport, events);
 
-    Studio.events = events;
-    Studio.bridge = bridge;
-    Studio.BridgeError = BridgeError;
-})(window.SQLiteStudio = window.SQLiteStudio || {});
+    AxLite.events = events;
+    AxLite.bridge = bridge;
+    AxLite.BridgeError = BridgeError;
+})(window.AxLite = window.AxLite || {});
